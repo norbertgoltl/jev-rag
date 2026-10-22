@@ -52,6 +52,6 @@ Az FND-005 monorepo-struktúrája elkészült. Elsődleges környezet: macOS App
 
 A Python-projekt gyökere `apps/api`, a pnpm workspace gyökere a repository. Az API lockfile-ja `apps/api/uv.lock`, a frontendé az egyetlen root `pnpm-lock.yaml` lesz. A FastAPI és Next.js a hoston, csak az infrastruktúra Dockerben fut majd.
 
-Jelenleg nincs indítható alkalmazás vagy infrastruktúra. A Git-szabályok bővítése az FND-006, a fejlesztői CLI az FND-007 feladata.
+Jelenleg nincs indítható alkalmazás vagy infrastruktúra. A Git/editor szabályok és a PR-sablon elkészültek. A fejlesztői CLI az FND-007 feladata.
 
 Részletek: [fejlesztői környezet és workspace-határok](docs/development/workflow.md).
