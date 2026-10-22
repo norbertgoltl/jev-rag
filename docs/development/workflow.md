@@ -26,4 +26,20 @@ Az `apps/api/uv.lock` az FND-008, a root `pnpm-lock.yaml` az FND-012 során jön
 
 A root [.env.example](../../.env.example) a backend/infra secret nélküli mintája. A lokális `.env` nem verziókezelt és nem hajtható végre shell scriptként. A frontend saját mintáját az FND-012–014 hozza létre.
 
-Jelenleg nincs alkalmazásprojekt, Compose vagy fejlesztői CLI. A Git/editor szabályok az FND-006, a parancsfelület az FND-007 feladata.
+Jelenleg nincs alkalmazásprojekt, Compose vagy fejlesztői CLI. A parancsfelület az FND-007 feladata.
+
+## Git és szerkesztési szabályok
+
+Rövid életű branchek a `main` fölött, review és squash merge. Új feladatnál `feature/fnd-XXX-description`, hibajavításnál `fix/fnd-XXX-description` név használható. A commitüzenet Conventional Commits formátumú, angolul, például:
+
+```text
+chore(repo): initialize monorepo development tooling
+```
+
+Commitüzenethez co-author nem adható. Branch protection és kötelező GitHub CI-check későbbi feladat. A [PR-sablon](../../.github/pull_request_template.md) a scope-ot, változásokat, ellenőrzéseket és kockázatokat rögzíti.
+
+Az EditorConfig UTF-8-at, LF-et, végső újsort, Pythonhoz és shellhez 4, TypeScript/JSON/YAML-hez 2 szóközt, Makefile-hoz tabot ír elő. A Git attributes normalizálja a szövegeket és binárisként kezeli a kijelölt médiatípusokat.
+
+A `.gitignore` kizárja a secret fájlokat, környezeteket, függőségeket, buildet és cache-t. A `.env.example`, `.env.local.example` és hasonló minták kivételek. Ez nem akadályozza meg a titkok explicit hozzáadását, az automatizált secret scanner az FND-024 része.
+
+Commit előtt `git status --short` és `git diff --check` futtatandó. A fejlesztői CLI és annak ellenőrzése az FND-007 része. Új fájloknál a diff mellett a fájlok tartalmát is át kell nézni, mert a `git diff` önmagában nem mutatja az untracked fájlokat. Ellenőrizendő, hogy nincs secret, `.venv`, `node_modules` vagy generált adat a változások között.
