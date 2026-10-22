@@ -1,0 +1,453 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Jev RAG Foundation API contract",
+    "version": "1.0.0",
+    "description": "FND-003 design contract. Runtime implementation belongs to FND-009 through FND-017. Business APIs use /api/v1. Health endpoints are unversioned."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000",
+      "description": "Local development backend"
+    }
+  ],
+  "paths": {
+    "/health/live": {
+      "get": {
+        "operationId": "getLiveness",
+        "description": "Process liveness only. Never calls external dependencies.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful diagnostic response.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivenessResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "getReadiness",
+        "description": "Bounded Qdrant connectivity check. TypeSafe availability does not affect readiness. An unconfigured probe reports down.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful diagnostic response.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "description": "Qdrant is unavailable. This diagnostic response intentionally differs from the standard error envelope.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotReadyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/status": {
+      "get": {
+        "operationId": "getSystemStatus",
+        "description": "Minimal process status for the frontend. Never calls external dependencies and does not imply Qdrant readiness.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful diagnostic response.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "RequestId": {
+        "name": "X-Request-ID",
+        "in": "header",
+        "required": false,
+        "description": "Accept 1-64 ASCII letters, digits, dot, underscore or hyphen. Missing or invalid values are replaced by UUID4, not rejected as validation errors.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "headers": {
+      "RequestId": {
+        "description": "Correlation ID on every response. Equals request_id in an error body. A valid incoming ID is preserved, otherwise UUID4 is generated.",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        }
+      }
+    },
+    "responses": {
+      "InternalError": {
+        "description": "Unexpected application failure. Code INTERNAL_ERROR, message Internal server error, details null.",
+        "headers": {
+          "X-Request-ID": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Unknown endpoint. Code NOT_FOUND, message Resource not found, details null.",
+        "headers": {
+          "X-Request-ID": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "MethodNotAllowed": {
+        "description": "Unsupported HTTP method. Code METHOD_NOT_ALLOWED, message Method not allowed, details null.",
+        "headers": {
+          "X-Request-ID": {
+            "$ref": "#/components/headers/RequestId"
+          },
+          "Allow": {
+            "description": "Allowed HTTP methods for this resource.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Invalid request. Code VALIDATION_ERROR, message Invalid request, sanitized details only.",
+        "headers": {
+          "X-Request-ID": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Future business dependency failure. Code SERVICE_UNAVAILABLE, message Service unavailable, details null. Readiness uses NotReadyResponse instead.",
+        "headers": {
+          "X-Request-ID": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error": {
+        "description": "Standard error envelope, except the documented readiness dependency failure.",
+        "headers": {
+          "X-Request-ID": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "LivenessResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "alive"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "examples": [
+          {
+            "status": "alive"
+          }
+        ]
+      },
+      "ReadinessResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ready"
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "qdrant": {
+                "type": "string",
+                "const": "up"
+              }
+            },
+            "required": [
+              "qdrant"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "status",
+          "dependencies"
+        ],
+        "additionalProperties": false,
+        "examples": [
+          {
+            "status": "ready",
+            "dependencies": {
+              "qdrant": "up"
+            }
+          }
+        ]
+      },
+      "NotReadyResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "not_ready"
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "qdrant": {
+                "type": "string",
+                "const": "down"
+              }
+            },
+            "required": [
+              "qdrant"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "status",
+          "dependencies"
+        ],
+        "additionalProperties": false,
+        "examples": [
+          {
+            "status": "not_ready",
+            "dependencies": {
+              "qdrant": "down"
+            }
+          }
+        ]
+      },
+      "SystemStatusResponse": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "const": "api"
+          },
+          "status": {
+            "type": "string",
+            "const": "ok"
+          }
+        },
+        "required": [
+          "service",
+          "status"
+        ],
+        "additionalProperties": false,
+        "examples": [
+          {
+            "service": "api",
+            "status": "ok"
+          }
+        ]
+      },
+      "ValidationDetail": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "minLength": 1
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "field",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1
+              },
+              "details": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ValidationDetail"
+                    }
+                  }
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "details"
+            ],
+            "additionalProperties": false
+          },
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9._-]+$"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "additionalProperties": false,
+        "examples": [
+          {
+            "error": {
+              "code": "VALIDATION_ERROR",
+              "message": "Invalid request",
+              "details": [
+                {
+                  "field": "body.question",
+                  "code": "required"
+                }
+              ]
+            },
+            "request_id": "80d3c0b6-9b52-4aa9-85a0-5a657bb402d8"
+          }
+        ]
+      }
+    }
+  }
+}
