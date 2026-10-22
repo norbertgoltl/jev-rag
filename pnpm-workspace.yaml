@@ -1,0 +1,6 @@
+packages:
+  - apps/web
+
+sharedWorkspaceLockfile: true
+engineStrict: true
+pmOnFail: ignore

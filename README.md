@@ -38,14 +38,20 @@ Az FND-001–004 tervezési eredményei elkészültek:
 
 A döntés moduláris FastAPI backend, Next.js frontend, külön Jev döntési adapter és Docker Compose-ban futó Qdrant. A futó alkalmazások, az infrastruktúra és az SDK-integráció megvalósítása a következő Foundation-feladatok része.
 
-## Indítás
+## Monorepo és fejlesztői környezet
 
-**Jelenleg nincs dokumentált, ellenőrzött indítási parancs.**
+Az FND-005 monorepo-struktúrája elkészült. Elsődleges környezet: macOS Apple Silicon. A Node.js pin `24.13.0`, a pnpm pin `12.6.0`. A Python célverziója uv-managed `3.14.8`, a backend inicializálása az FND-008 része.
 
-A tervezett fejlesztői futtatási modell szerint:
+| Könyvtár | Felelősség |
+| --- | --- |
+| `apps/api` | Python/FastAPI projekt, saját uv.lock és .venv |
+| `apps/web` | Next.js projekt, a root pnpm workspace része |
+| `infra/compose` | Docker-infrastruktúra |
+| `scripts` | Fejlesztői parancsok és smoke tesztek |
+| `docs` | Architektúra, ADR-ek és fejlesztői útmutatók |
 
-- a Python/FastAPI alkalmazás helyben, `uv` által kezelt környezetben fut;
-- a Next.js alkalmazás helyben fut;
-- a szükséges háttérszolgáltatások Dockerben futnak.
+A Python-projekt gyökere `apps/api`, a pnpm workspace gyökere a repository. Az API lockfile-ja `apps/api/uv.lock`, a frontendé az egyetlen root `pnpm-lock.yaml` lesz. A FastAPI és Next.js a hoston, csak az infrastruktúra Dockerben fut majd.
 
-A tényleges telepítési, konfigurációs és indítási parancsok az implementálásuk és ellenőrzésük után kerülnek a README-be.
+Jelenleg nincs indítható alkalmazás vagy infrastruktúra. A Git-szabályok bővítése az FND-006, a fejlesztői CLI az FND-007 feladata.
+
+Részletek: [fejlesztői környezet és workspace-határok](docs/development/workflow.md).
