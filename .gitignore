@@ -1,0 +1,132 @@
+# OPERATING SYSTEM
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100/
+.Trashes/
+
+# IDE / EDITOR
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ENVIRONMENT VARIABLES / SECRETS
+
+# Local environment files
+.env
+.env.*
+
+# Allow environment templates
+!.env.example
+!.env.sample
+!.env.template
+
+# PYTHON / FASTAPI / UV
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python packaging
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# uv local cache (if configured)
+.uv-cache/
+
+# Python testing
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# Linters / type checkers
+.mypy_cache/
+.ruff_cache/
+.pyright/
+.pytype/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# NODE.JS / NEXT.JS / TYPESCRIPT
+
+# Dependencies
+node_modules/
+bower_components/
+
+# Next.js
+.next/
+out/
+.vercel/
+
+# Turborepo
+.turbo/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Build artifacts
+.cache/
+.parcel-cache/
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# DOCKER / DOCKER COMPOSE
+
+# Developer-specific Compose overrides
+compose.override.yml
+compose.override.yaml
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# Local Docker volume data
+docker-data/
+.docker-data/
+docker/volumes/
+
+# Local database storage
+postgres-data/
+redis-data/
+
+# LOGS / TEMPORARY FILES
+
+logs/
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+
+tmp/
+temp/
+
+# LOCAL DATABASE FILES
+
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
