@@ -40,7 +40,7 @@ A döntés moduláris FastAPI backend, Next.js frontend, külön Jev döntési a
 
 ## Monorepo és fejlesztői környezet
 
-Az FND-005 monorepo-struktúrája elkészült. Elsődleges környezet: macOS Apple Silicon. A Node.js pin `24.13.0`, a pnpm pin `12.6.0`. A Python célverziója uv-managed `3.14.8`, a backend inicializálása az FND-008 része.
+Az FND-005–007 alapstruktúrája és fejlesztői CLI-je elkészült. Elsődleges környezet: macOS Apple Silicon, POSIX shell és GNU/BSD Make. A rögzített Node.js-verzió `24.13.0`, a pnpm-verzió `12.6.0`. A Python célverziója uv-managed `3.14.8`, a backend inicializálása az FND-008 része.
 
 | Könyvtár | Felelősség |
 | --- | --- |
@@ -49,9 +49,20 @@ Az FND-005 monorepo-struktúrája elkészült. Elsődleges környezet: macOS App
 | `infra/compose` | Docker-infrastruktúra |
 | `scripts` | Fejlesztői parancsok és smoke tesztek |
 | `docs` | Architektúra, ADR-ek és fejlesztői útmutatók |
+| `.github` | PR-sablon, később CI |
+
+A repository gyökeréből futtatható:
+
+```sh
+make help
+make doctor
+make smoke
+```
+
+A `doctor` csak ellenőriz, hiányzó eszköz vagy verzióeltérés esetén hibával lép ki. A legutóbbi futás sikeres, 0 kilépési kóddal, az uv-managed Python `3.14.8` és minden ellenőrzött eszköz megfelelő. A `smoke` offline, szimulált eszközökkel ellenőrzi a CLI-t.
+
+A backend és frontend még nem indítható. A `setup` hiányzó manifest vagy lockfile esetén leáll. Az alkalmazás-, infrastruktúra- és quality parancsok a későbbi Foundation-feladatok elkészültéig érthető hibát adnak.
 
 A Python-projekt gyökere `apps/api`, a pnpm workspace gyökere a repository. Az API lockfile-ja `apps/api/uv.lock`, a frontendé az egyetlen root `pnpm-lock.yaml` lesz. A FastAPI és Next.js a hoston, csak az infrastruktúra Dockerben fut majd.
 
-Jelenleg nincs indítható alkalmazás vagy infrastruktúra. A Git/editor szabályok és a PR-sablon elkészültek. A fejlesztői CLI az FND-007 feladata.
-
-Részletek: [fejlesztői környezet és workspace-határok](docs/development/workflow.md).
+Részletek: [fejlesztői környezet, parancsok és Git-workflow](docs/development/workflow.md).
