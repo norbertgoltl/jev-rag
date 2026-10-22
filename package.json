@@ -1,0 +1,9 @@
+{
+  "name": "jev-rag",
+  "private": true,
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": "24.13.0",
+    "pnpm": "12.6.0"
+  }
+}
