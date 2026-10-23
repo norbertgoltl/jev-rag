@@ -4,3 +4,7 @@ packages:
 sharedWorkspaceLockfile: true
 engineStrict: true
 pmOnFail: ignore
+
+allowBuilds:
+  sharp: false
+  unrs-resolver: false

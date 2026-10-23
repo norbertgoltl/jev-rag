@@ -10,8 +10,8 @@ Elsődleges környezet: macOS Apple Silicon. A parancsok POSIX shellre és GNU/B
 | Make | GNU Make vagy BSD make | A `doctor` kiírja a verziót |
 | uv | Python-projektkezelő | A `doctor` kiírja a verziót |
 | Python | uv-managed `3.14.8`, telepítve és ellenőrizve | FND-008-tól `apps/api/.python-version` |
-| Node.js | `24.13.0`, a kijelölt 24 LTS ágból | Root `.node-version` és `package.json` |
-| pnpm | `12.6.0` | Root `package.json` `packageManager` és `engines` |
+| Node.js | `24.22.1`, a kijelölt 24 LTS ágból | Root `.node-version` és `package.json` |
+| pnpm | `12.15.0` | Root `package.json` `packageManager` és `engines` |
 | Corepack | Bootstraplehetőség, meglévő megfelelő pnpm mellett opcionális | A `doctor` kiírja, ha elérhető |
 | Docker + Compose | Elérhető CLI és Compose plugin | A `doctor` kiírja a verziót |
 
@@ -100,10 +100,12 @@ Commit előtt `git status --short`, `git diff --check` és `make smoke` futtatan
 
 ## FND-005–007 ellenőrzési állapot
 
-A struktúra, workspace-metaadatok, Git/editor szabályok, PR-sablon, CLI és smoke tesztek elkészültek. A `make help` és a `make smoke` sikeres. A Python-környezet javítása után a valódi `make doctor` is sikeresen lefutott, 0 kilépési kóddal. Az uv-managed Python `3.14.8`, Node.js `24.13.0`, pnpm `12.6.0`, Git, Make, uv, Corepack és Docker Compose ellenőrzése megfelelő. A diagnosztika nem telepített vagy módosított eszközt, alkalmazás- és infrastruktúra-készenlétet nem vizsgál.
+A struktúra, workspace-metaadatok, Git/editor szabályok, PR-sablon, CLI és smoke tesztek elkészültek. A `make help` és a `make smoke` sikeres. A Python-környezet javítása után a valódi `make doctor` is sikeresen lefutott, 0 kilépési kóddal. Az uv-managed Python `3.14.8`, Node.js `24.22.1`, pnpm `12.15.0`, Git, Make, uv, Corepack és Docker Compose ellenőrzése megfelelő. A diagnosztika nem telepített vagy módosított eszközt, alkalmazás- és infrastruktúra-készenlétet nem vizsgál.
 
 A backend, frontend, infrastruktúra és alkalmazásminőség-ellenőrzések a megjelölt későbbi feladatokhoz tartoznak. Ezekhez a mostani CLI nem jelent hamis sikert.
 
 ## FND-008–011 ellenőrzési állapot
 
 Elkészült a backend, a típusos konfiguráció, a hibakezelés és a JSON logging. A valódi uv.lock alapján a projekt települt. A 36 backendteszt, a lockfile-ellenőrzés, a wheel/sdist build, az élő host HTTP smoke és a módosított CLI smoke teszt sikeres. A readiness valódi Qdrant-adapter nélkül továbbra is 503. Részletek és parancsok: [API README](../../apps/api/README.md), [backend konfiguráció](backend.md).
+
+Frontend workspace available: see apps/web/README.md.

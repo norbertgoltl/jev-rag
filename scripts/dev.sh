@@ -15,6 +15,7 @@ Available now:
   smoke       Run offline developer CLI smoke checks
   setup-api   Install locked backend dependencies
   dev-api     Start the host FastAPI development server
+  dev-web     Start the host Next.js development server
   test-api    Run offline backend tests
 
 Requires later Foundation tasks:
@@ -23,7 +24,6 @@ Requires later Foundation tasks:
   down        Stop infrastructure, preserving volumes (FND-015)
   status      Show infrastructure status (FND-015)
   logs        Show infrastructure logs (FND-015)
-  dev-web     Start the host Next.js development server (FND-012)
   lint        Check backend and frontend lint (FND-021, FND-022)
   format      Format backend and frontend sources (FND-021, FND-022)
   typecheck   Check Python and TypeScript types (FND-021, FND-022)
@@ -68,7 +68,11 @@ HELP
         exec uv run --project "$REPO_ROOT/apps/api" --managed-python --locked pytest "$REPO_ROOT/apps/api/tests"
         ;;
     dev-web)
-        fail 'The Next.js application is not implemented. Complete FND-012–014 first.'
+        require_command pnpm 'Activate the pinned pnpm version with Corepack.'
+        load_versions
+        check_node_pnpm
+        cd "$REPO_ROOT"
+        exec pnpm --filter @jev-rag/web dev
         ;;
     lint|format|typecheck|test|check)
         fail 'Application quality commands are not implemented. Complete FND-021–022 first. Use make smoke for developer CLI checks.'

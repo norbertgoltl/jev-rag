@@ -40,7 +40,7 @@ A döntés moduláris FastAPI backend, Next.js frontend, külön Jev döntési a
 
 ## Monorepo és fejlesztői környezet
 
-Az FND-005–007 alapstruktúrája és fejlesztői CLI-je elkészült. Elsődleges környezet: macOS Apple Silicon, POSIX shell és GNU/BSD Make. A rögzített Node.js-verzió `24.13.0`, a pnpm-verzió `12.6.0`. A backend uv-managed Python `3.14.8` interpretert használ, az FND-008–011 megvalósult.
+Az FND-005–007 alapstruktúrája és fejlesztői CLI-je elkészült. Elsődleges környezet: macOS Apple Silicon, POSIX shell és GNU/BSD Make. A rögzített Node.js-verzió `24.22.1`, a pnpm-verzió `12.15.0`. A backend uv-managed Python `3.14.8` interpretert használ, az FND-008–011 megvalósult.
 
 | Könyvtár | Felelősség |
 | --- | --- |
@@ -68,3 +68,5 @@ A Python-projekt gyökere `apps/api`, a pnpm workspace gyökere a repository. Az
 Részletek: [fejlesztői környezet, parancsok és Git-workflow](docs/development/workflow.md).
 
 A backendhez előkészített parancsok: `make setup-api`, `make dev-api`, `make test-api`. Ezek a rögzített `apps/api/uv.lock` alapján futnak.
+
+Frontend workspace available: see apps/web/README.md.

@@ -25,7 +25,7 @@ case "${0##*/}" in
             printf 'GNU Make 4.4\n'
         fi
         ;;
-    node) printf 'v%s\n' "${SMOKE_NODE_VERSION:-24.13.0}" ;;
+    node) printf 'v%s\n' "${SMOKE_NODE_VERSION:-24.22.1}" ;;
     corepack) printf '0.34.5\n' ;;
     docker)
         [ "${SMOKE_COMPOSE_MISSING:-0}" = 0 ] || [ "$1" != compose ] || exit 1
@@ -48,7 +48,7 @@ case "${0##*/}" in
         if [ "$1" = --version ]; then
             [ "${pnpm_config_pm_on_fail:-}" = ignore ] || exit 1
             [ "${COREPACK_ENABLE_NETWORK:-}" = 0 ] || exit 1
-            printf '%s\n' "${SMOKE_PNPM_VERSION:-12.6.0}"
+            printf '%s\n' "${SMOKE_PNPM_VERSION:-12.15.0}"
         else
             printf 'pnpm %s\n' "$*" >> "$CLI_SMOKE_LOG"
         fi
@@ -82,8 +82,8 @@ cd "$smoke_dir"
 "$MAKE_BIN" -C "$fixture_root" help > "$smoke_output"
 sh "$fixture_root/scripts/doctor.sh" > "$smoke_output"
 SMOKE_BSD_MAKE=1 sh "$fixture_root/scripts/doctor.sh" > "$smoke_output"
-expect_failure 'Node.js 24.13.0 required' env SMOKE_NODE_VERSION=22.0.0 sh "$fixture_root/scripts/doctor.sh"
-expect_failure 'pnpm 12.6.0 required' env SMOKE_PNPM_VERSION=10.0.0 sh "$fixture_root/scripts/doctor.sh"
+expect_failure 'Node.js 24.22.1 required' env SMOKE_NODE_VERSION=22.0.0 sh "$fixture_root/scripts/doctor.sh"
+expect_failure 'pnpm 12.15.0 required' env SMOKE_PNPM_VERSION=10.0.0 sh "$fixture_root/scripts/doctor.sh"
 expect_failure 'Python 3.14.8 is not installed' env SMOKE_PYTHON_MISSING=1 sh "$fixture_root/scripts/doctor.sh"
 expect_failure 'Docker Compose is unavailable' env SMOKE_COMPOSE_MISSING=1 sh "$fixture_root/scripts/doctor.sh"
 expect_failure 'Unknown command' sh "$fixture_root/scripts/dev.sh" unknown
@@ -92,7 +92,7 @@ for tool in dirname cat sed; do
     ln -s "$(command -v "$tool")" "$smoke_dir/missing-tools/$tool"
 done
 expect_failure 'Missing uv' env PATH="$smoke_dir/missing-tools" /bin/sh "$fixture_root/scripts/doctor.sh"
-for target in up down status logs dev-web lint format typecheck test check; do
+for target in up down status logs lint format typecheck test check; do
     expect_failure 'not implemented' "$MAKE_BIN" -C "$fixture_root" "$target"
 done
 expect_failure 'Missing apps/api/pyproject.toml' "$MAKE_BIN" -C "$fixture_root" setup
