@@ -11,7 +11,7 @@ Elsődleges környezet: macOS Apple Silicon. A parancsok POSIX shellre és GNU/B
 | uv | Python-projektkezelő | A `doctor` kiírja a verziót |
 | Python | uv-managed `3.14.8`, telepítve és ellenőrizve | FND-008-tól `apps/api/.python-version` |
 | Node.js | `24.22.1`, a kijelölt 24 LTS ágból | Root `.node-version` és `package.json` |
-| pnpm | `12.15.0` | Root `package.json` `packageManager` és `engines` |
+| pnpm | `12.15.0` | Root `package.json` `packageManager` |
 | Corepack | Bootstraplehetőség, meglévő megfelelő pnpm mellett opcionális | A `doctor` kiírja, ha elérhető |
 | Docker + Compose | Elérhető CLI és Compose plugin | A `doctor` kiírja a verziót |
 
@@ -61,12 +61,12 @@ Más könyvtárból `make -C /absolute/path/to/jev-rag help` használható. A sh
 
 | Parancs | Delegálás vagy jelenlegi akadály |
 | --- | --- |
-| `make setup` | Előbb ellenőrzi mindkét workspace manifestjét, az API Python-pinjét és mindkét lockfile-t. Ezután `uv sync --project apps/api --managed-python --locked`, majd root `pnpm install --frozen-lockfile`. Jelenleg a frontend manifestje és lockfile-ja hiányzik (FND-012). |
+| `make setup` | Előbb ellenőrzi mindkét workspace manifestjét, az API Python-pinjét és mindkét lockfile-t. Ezután `uv sync --project apps/api --managed-python --locked`, majd root `pnpm install --frozen-lockfile`. A frontend manifestje és a gyökérszintű lockfile elkészült. |
 | `make up` | FND-015–017 hiányzik. Később csak Docker-infrastruktúrát indít. |
 | `make down` | FND-015–017 hiányzik. Később megőrzi a volume-okat és a hoston futó appokat. |
 | `make status`, `make logs` | FND-015–017 hiányzik. |
 | `make dev-api` | Hoston futó FastAPI indítása, uv-környezetben, alapértelmezetten loopback címen. |
-| `make dev-web` | FND-012–014 hiányzik. Később hoston, pnpm-mel, loopback címen fut. |
+| `make dev-web` | A @jev-rag/web dev parancsát hívja, 127.0.0.1:3000 címen. |
 | `make lint`, `make format`, `make typecheck`, `make test` | FND-021–022 minőségellenőrzései hiányoznak. |
 | `make check` | FND-021–022 hiányzik. Később nem módosító lint, format-check, typecheck, teszt és frontend build. |
 
@@ -108,4 +108,7 @@ A backend, frontend, infrastruktúra és alkalmazásminőség-ellenőrzések a m
 
 Elkészült a backend, a típusos konfiguráció, a hibakezelés és a JSON logging. A valódi uv.lock alapján a projekt települt. A 36 backendteszt, a lockfile-ellenőrzés, a wheel/sdist build, az élő host HTTP smoke és a módosított CLI smoke teszt sikeres. A readiness valódi Qdrant-adapter nélkül továbbra is 503. Részletek és parancsok: [API README](../../apps/api/README.md), [backend konfiguráció](backend.md).
 
-Frontend workspace available: see apps/web/README.md.
+
+### FND-012–014 ellenőrzés
+
+A frontend hivatalos generátorból készült. A pnpm 12.15.0 szerinti frozen telepítés, ESLint, Next route typegen és TypeScript, 18 mockolt teszt, backend nélküli production build, CLI smoke és production HTTP smoke sikeres. A Node 24.22.1 ARM64 kezdetben külön cache runtime-ból futott, majd a host Node-verziója is frissült. A pnpm 12.15.0 verzióra átállás után a host `make doctor` sikeres. A `pnpm install --frozen-lockfile`, frontend lint, typecheck, production build és CLI smoke ellenőrzések sikeresek. A lockfile SHA-256 ellenőrzőösszege változatlan, újragenerálás nem történt. A valódi Qdrant-ready integráció későbbi feladat. Részletek: [frontend](../../apps/web/README.md).
