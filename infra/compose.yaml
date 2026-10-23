@@ -1,0 +1,12 @@
+name: ${COMPOSE_PROJECT_NAME:-jev-rag}
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.19.2
+    platform: linux/arm64
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${QDRANT_HOST_PORT:-6333}:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+volumes:
+  qdrant_data:

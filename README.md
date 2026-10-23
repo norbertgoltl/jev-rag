@@ -70,3 +70,5 @@ Részletek: [fejlesztői környezet, parancsok és Git-workflow](docs/developmen
 A backendhez előkészített parancsok: `make setup-api`, `make dev-api`, `make test-api`. Ezek a rögzített `apps/api/uv.lock` alapján futnak.
 
 Az FND-012–014 frontend alap elkészült. Indítás: `make dev-web`. Telepítés, API-kommunikáció és ellenőrzések: [frontend dokumentáció](apps/web/README.md).
+
+Qdrant Compose setup: [infrastructure](docs/development/infrastructure.md).
