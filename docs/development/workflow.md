@@ -67,7 +67,7 @@ Más könyvtárból `make -C /absolute/path/to/jev-rag help` használható. A sh
 | `make status`, `make logs` | Projekt Qdrant állapota és követhető logjai. |
 | `make dev-api` | Hoston futó FastAPI indítása, uv-környezetben, alapértelmezetten loopback címen. |
 | `make dev-web` | A @jev-rag/web dev parancsát hívja, 127.0.0.1:3000 címen. |
-| `make lint`, `make format`, `make typecheck`, `make test` | FND-021–022 minőségellenőrzései hiányoznak. |
+| `make lint`, `make format`, `make typecheck` | FND-021–022 minőségellenőrzései hiányoznak. |
 | `make check` | FND-021–022 hiányzik. Később nem módosító lint, format-check, typecheck, teszt és frontend build. |
 
 Minden hiányzó alrendszerhez érthető, nem nulla kilépési kód tartozik. A setup az első telepítési hiba után leáll, nem futtatja a következő csomagkezelőt. A két csomagkezelő telepítése nem közös tranzakció, a sikeres első lépést a második hibája nem vonja vissza. Ismételt setup ugyanazokat a rögzített függőségeket szinkronizálja.
@@ -114,3 +114,5 @@ Elkészült a backend, a típusos konfiguráció, a hibakezelés és a JSON logg
 A frontend hivatalos generátorból készült. A pnpm 12.15.0 szerinti frozen telepítés, ESLint, Next route typegen és TypeScript, 18 mockolt teszt, backend nélküli production build, CLI smoke és production HTTP smoke sikeres. A Node 24.22.1 ARM64 kezdetben külön cache runtime-ból futott, majd a host Node-verziója is frissült. A pnpm 12.15.0 verzióra átállás után a host `make doctor` sikeres. A `pnpm install --frozen-lockfile`, frontend lint, typecheck, production build és CLI smoke ellenőrzések sikeresek. A lockfile SHA-256 ellenőrzőösszege változatlan, újragenerálás nem történt. A valódi Qdrant-ready integráció későbbi feladat. Részletek: [frontend](../../apps/web/README.md).
 
 Az FND-015–017 infrastruktúra és valódi Qdrant readiness elkészült. Aktuális parancsok és validáció: [infrastruktúra](infrastructure.md).
+
+A `make test` offline backend- és frontendteszteket futtat. A `make jev-smoke` külön engedélyezett live TypeSafe ellenőrzés, nem része a normál tesztfutásnak. Részletek: [Jev integráció](jev-integration.md).

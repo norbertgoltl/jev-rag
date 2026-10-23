@@ -72,3 +72,5 @@ A backendhez előkészített parancsok: `make setup-api`, `make dev-api`, `make 
 Az FND-012–014 frontend alap elkészült. Indítás: `make dev-web`. Telepítés, API-kommunikáció és ellenőrzések: [frontend dokumentáció](apps/web/README.md).
 
 Qdrant infrastruktúra: `make up`, `make health`, `make status`, `make down`. Előfeltételek, named volume és izolált tesztek: [infrastruktúra](docs/development/infrastructure.md).
+
+A Jev DecisionPort és TypeSafe SDK integráció elkészült. Offline tesztek: `make test`. Konfiguráció és külön engedélyezhető live smoke: [Jev integráció](docs/development/jev-integration.md).

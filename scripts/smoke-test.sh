@@ -87,13 +87,14 @@ expect_failure 'Node.js 24.22.1 required' env SMOKE_NODE_VERSION=22.0.0 sh "$fix
 expect_failure 'pnpm 12.15.0 required' env SMOKE_PNPM_VERSION=10.0.0 sh "$fixture_root/scripts/doctor.sh"
 expect_failure 'Python 3.14.8 is not installed' env SMOKE_PYTHON_MISSING=1 sh "$fixture_root/scripts/doctor.sh"
 expect_failure 'Docker Compose is unavailable' env SMOKE_COMPOSE_MISSING=1 sh "$fixture_root/scripts/doctor.sh"
+expect_failure 'Set JEV_LIVE_SMOKE=1' env JEV_LIVE_SMOKE= sh "$fixture_root/scripts/dev.sh" jev-smoke
 expect_failure 'Unknown command' sh "$fixture_root/scripts/dev.sh" unknown
 mkdir "$smoke_dir/missing-tools"
 for tool in dirname cat sed; do
     ln -s "$(command -v "$tool")" "$smoke_dir/missing-tools/$tool"
 done
 expect_failure 'Missing uv' env PATH="$smoke_dir/missing-tools" /bin/sh "$fixture_root/scripts/doctor.sh"
-for target in lint format typecheck test check; do
+for target in lint format typecheck check; do
     expect_failure 'not implemented' "$MAKE_BIN" -C "$fixture_root" "$target"
 done
 expect_failure 'Missing apps/api/pyproject.toml' "$MAKE_BIN" -C "$fixture_root" setup
