@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -16,7 +18,8 @@ async def liveness() -> LivenessResponse:
 @router.get("/ready", response_model=ReadinessResponse, responses={503: {"model": NotReadyResponse}})
 async def readiness(request: Request) -> ReadinessResponse | JSONResponse:
     try:
-        up = await request.app.state.readiness_probe.check_health()
+        async with asyncio.timeout(request.app.state.settings.qdrant_timeout_seconds):
+            up = await request.app.state.readiness_probe.check_health()
     except (TimeoutError, OSError):
         up = False
     if up:

@@ -20,23 +20,34 @@ class FakeProbe:
     (True, 200, {"status": "ready", "dependencies": {"qdrant": "up"}}),
     (False, 503, {"status": "not_ready", "dependencies": {"qdrant": "down"}}),
 ])
-def test_readiness(up, status, body):
+def test_readiness(settings, up, status, body):
     probe = FakeProbe(up)
-    with TestClient(create_app(probe)) as client:
+    with TestClient(create_app(settings, probe)) as client:
         response = client.get("/health/ready")
     assert response.status_code == status
     assert response.json() == body
     assert probe.calls == 1
 
 
-def test_liveness_and_status_do_not_call_dependencies():
+def test_liveness_and_status_do_not_call_dependencies(settings):
     probe = FakeProbe(False)
-    with TestClient(create_app(probe)) as client:
+    with TestClient(create_app(settings, probe)) as client:
         assert client.get("/health/live").json() == {"status": "alive"}
         assert client.get("/api/v1/system/status").json() == {"service": "api", "status": "ok"}
     assert probe.calls == 0
 
 
-def test_unconfigured_readiness():
-    with TestClient(create_app()) as client:
+def test_unconfigured_readiness(settings):
+    with TestClient(create_app(settings)) as client:
+        assert client.get("/health/ready").status_code == 503
+
+
+def test_readiness_timeout(settings):
+    class SlowProbe:
+        async def check_health(self):
+            await asyncio.sleep(10)
+            return True
+
+    settings.qdrant_timeout_seconds = 0.001
+    with TestClient(create_app(settings, SlowProbe())) as client:
         assert client.get("/health/ready").status_code == 503

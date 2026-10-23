@@ -4,8 +4,8 @@ from fastapi.testclient import TestClient
 from jev_rag_api.main import create_app
 
 
-def test_docs_and_schema():
-    with TestClient(create_app()) as client:
+def test_docs_and_schema(settings):
+    with TestClient(create_app(settings)) as client:
         assert client.get("/docs").status_code == 200
         schema = client.get("/openapi.json").json()
     assert set(schema["paths"]) == {"/health/live", "/health/ready", "/api/v1/system/status"}
@@ -16,8 +16,8 @@ def test_docs_and_schema():
     ("http://127.0.0.1:3000", True), ("http://localhost:3000", False),
     ("https://example.com", False),
 ])
-def test_cors_preflight(origin, allowed):
-    with TestClient(create_app()) as client:
+def test_cors_preflight(settings, origin, allowed):
+    with TestClient(create_app(settings)) as client:
         response = client.options("/health/live", headers={
             "Origin": origin, "Access-Control-Request-Method": "GET",
             "Access-Control-Request-Headers": "X-Request-ID,Content-Type",
@@ -27,8 +27,8 @@ def test_cors_preflight(origin, allowed):
     assert "access-control-allow-credentials" not in response.headers
 
 
-def test_cors_rejects_post():
-    with TestClient(create_app()) as client:
+def test_cors_rejects_post(settings):
+    with TestClient(create_app(settings)) as client:
         assert client.options("/health/live", headers={
             "Origin": "http://127.0.0.1:3000", "Access-Control-Request-Method": "POST",
         }).status_code == 400
