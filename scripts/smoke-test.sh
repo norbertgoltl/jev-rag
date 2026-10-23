@@ -32,6 +32,7 @@ case "${0##*/}" in
         printf 'Docker version 28.0.0\n'
         ;;
     uv)
+        case "$*" in *infrastructure.py\ doctor) exit 0 ;; esac
         case "$1" in
             --version) printf 'uv 0.11.14\n' ;;
             python)
@@ -92,7 +93,7 @@ for tool in dirname cat sed; do
     ln -s "$(command -v "$tool")" "$smoke_dir/missing-tools/$tool"
 done
 expect_failure 'Missing uv' env PATH="$smoke_dir/missing-tools" /bin/sh "$fixture_root/scripts/doctor.sh"
-for target in up down status logs lint format typecheck test check; do
+for target in lint format typecheck test check; do
     expect_failure 'not implemented' "$MAKE_BIN" -C "$fixture_root" "$target"
 done
 expect_failure 'Missing apps/api/pyproject.toml' "$MAKE_BIN" -C "$fixture_root" setup

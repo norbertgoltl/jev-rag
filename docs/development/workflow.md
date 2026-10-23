@@ -29,7 +29,7 @@ Hivatalos háttér: [Node.js kiadások](https://nodejs.org/en/about/previous-rel
 | `apps/web/` | Next.js és saját `package.json`, FND-012-től |
 | `package.json` | Privát workspace-koordinátor, runtime- és package manager pin, alkalmazásfüggőség nélkül |
 | `pnpm-workspace.yaml` | Kizárólag `apps/web`, közös root lockfile-lal |
-| `infra/compose/` | Docker-infrastruktúra, FND-015–017-től |
+| `infra/compose.yaml` | Docker-infrastruktúra, FND-015–017-től |
 | `scripts/` | Fejlesztői CLI és offline smoke tesztek |
 | `docs/architecture/`, `docs/adr/`, `docs/foundation/` | Architektúra, döntések, fázishatárok |
 | `docs/development/` | Setup és fejlesztési workflow |
@@ -62,9 +62,9 @@ Más könyvtárból `make -C /absolute/path/to/jev-rag help` használható. A sh
 | Parancs | Delegálás vagy jelenlegi akadály |
 | --- | --- |
 | `make setup` | Előbb ellenőrzi mindkét workspace manifestjét, az API Python-pinjét és mindkét lockfile-t. Ezután `uv sync --project apps/api --managed-python --locked`, majd root `pnpm install --frozen-lockfile`. A frontend manifestje és a gyökérszintű lockfile elkészült. |
-| `make up` | FND-015–017 hiányzik. Később csak Docker-infrastruktúrát indít. |
-| `make down` | FND-015–017 hiányzik. Később megőrzi a volume-okat és a hoston futó appokat. |
-| `make status`, `make logs` | FND-015–017 hiányzik. |
+| `make up` | Qdrant indítása, legfeljebb 90 másodperces health várakozással. |
+| `make down` | Projekt leállítása a volume és a host appok megőrzésével. |
+| `make status`, `make logs` | Projekt Qdrant állapota és követhető logjai. |
 | `make dev-api` | Hoston futó FastAPI indítása, uv-környezetben, alapértelmezetten loopback címen. |
 | `make dev-web` | A @jev-rag/web dev parancsát hívja, 127.0.0.1:3000 címen. |
 | `make lint`, `make format`, `make typecheck`, `make test` | FND-021–022 minőségellenőrzései hiányoznak. |
@@ -112,3 +112,5 @@ Elkészült a backend, a típusos konfiguráció, a hibakezelés és a JSON logg
 ### FND-012–014 ellenőrzés
 
 A frontend hivatalos generátorból készült. A pnpm 12.15.0 szerinti frozen telepítés, ESLint, Next route typegen és TypeScript, 18 mockolt teszt, backend nélküli production build, CLI smoke és production HTTP smoke sikeres. A Node 24.22.1 ARM64 kezdetben külön cache runtime-ból futott, majd a host Node-verziója is frissült. A pnpm 12.15.0 verzióra átállás után a host `make doctor` sikeres. A `pnpm install --frozen-lockfile`, frontend lint, typecheck, production build és CLI smoke ellenőrzések sikeresek. A lockfile SHA-256 ellenőrzőösszege változatlan, újragenerálás nem történt. A valódi Qdrant-ready integráció későbbi feladat. Részletek: [frontend](../../apps/web/README.md).
+
+Az FND-015–017 infrastruktúra és valódi Qdrant readiness elkészült. Aktuális parancsok és validáció: [infrastruktúra](infrastructure.md).

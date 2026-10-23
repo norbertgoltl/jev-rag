@@ -64,13 +64,17 @@ else
     printf 'INFO: Corepack is not installed. An existing pinned pnpm installation is sufficient.\n'
 fi
 
-check_tool docker 'Install Docker with the Compose plugin. No daemon access is needed by doctor.' docker --version
+check_tool docker 'Install and start Docker Desktop manually.' docker --version
 if command -v docker >/dev/null 2>&1; then
     if compose_version=$(docker compose version 2>/dev/null); then
         printf 'OK: %s\n' "$compose_version"
     else
         report_missing 'Docker Compose is unavailable. Install the Compose plugin.'
     fi
+fi
+
+if ! uv run --project "$REPO_ROOT/apps/api" --managed-python --locked --offline --no-sync python "$REPO_ROOT/scripts/infrastructure.py" doctor; then
+    doctor_failed=1
 fi
 
 if [ "$doctor_failed" -ne 0 ]; then

@@ -71,4 +71,4 @@ A backendhez előkészített parancsok: `make setup-api`, `make dev-api`, `make 
 
 Az FND-012–014 frontend alap elkészült. Indítás: `make dev-web`. Telepítés, API-kommunikáció és ellenőrzések: [frontend dokumentáció](apps/web/README.md).
 
-Qdrant Compose setup: [infrastructure](docs/development/infrastructure.md).
+Qdrant infrastruktúra: `make up`, `make health`, `make status`, `make down`. Előfeltételek, named volume és izolált tesztek: [infrastruktúra](docs/development/infrastructure.md).
