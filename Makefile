@@ -15,4 +15,7 @@ up down status logs dev-api dev-web lint format typecheck test check:
 smoke:
 	@sh scripts/smoke-test.sh
 
-.PHONY: help doctor setup up down status logs dev-api dev-web lint format typecheck test check smoke
+setup-api:
+	@sh scripts/dev.sh setup-api
+
+.PHONY: help doctor setup up down status logs dev-api dev-web lint format typecheck test check smoke setup-api
