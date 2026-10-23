@@ -46,6 +46,10 @@ Az entrypoint a Settings `API_HOST` és `API_PORT` értékével indít Uvicornt,
 | `GET /docs` | Swagger UI |
 | `GET /openapi.json` | Generált OpenAPI |
 
-A Qdrant readiness HTTPX runtime klienssel működik. Jev DecisionPort integration is available; RAG is not implemented. Részletek: [backend fejlesztői útmutató](../../docs/development/backend.md), [HTTP-contract](../../docs/architecture/interface-contracts.md).
+A Qdrant readiness HTTPX runtime klienssel működik. A Jev-integráció külön DecisionPort adapteren keresztül érhető el, RAG még nincs. Részletek: [backend fejlesztői útmutató](../../docs/development/backend.md), [HTTP-contract](../../docs/architecture/interface-contracts.md).
 
-See docs/development/jev-integration.md for the TypeSafe integration.
+## Jev Decision Layer
+
+Az FND-018–020 DecisionPort, mock/live/disabled adapter, TypeSafe SDK 0.7.5 és explicit jev-1.13.0 modell elkészült. Alapból offline mock mód aktív, explicit fixture-ökkel. A live kliens worker-életciklusonként egyszer jön létre és shutdownkor lezárul. A Jev nem módosítja a Qdrant readiness contractot, és nincs új HTTP-végpont.
+
+`make test-api` a backend offline tesztjeit, `make test` a backend és frontend offline tesztjeit futtatja. `make jev-smoke` csak külön `JEV_LIVE_SMOKE=1` költségelfogadással, live móddal és kulccsal indítható. Konfiguráció, hibák, retry és részletes parancsok: [Jev integráció](../../docs/development/jev-integration.md). Szerződések: [Decision Layer](../../docs/architecture/decision-layer.md).

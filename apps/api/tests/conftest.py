@@ -12,7 +12,9 @@ with pytest.MonkeyPatch.context() as patch:
 
 
 @pytest.fixture(autouse=True)
-def isolated_environment(monkeypatch):
+def isolated_environment(monkeypatch, request):
+    if request.config.getoption("--jev-live") and "live" in str(request.fspath):
+        return
     for name in Settings.model_fields:
         monkeypatch.delenv(name.upper(), raising=False)
 
@@ -20,3 +22,7 @@ def isolated_environment(monkeypatch):
 @pytest.fixture
 def settings():
     return Settings(_env_file=None, app_env="test")
+
+
+def pytest_addoption(parser):
+    parser.addoption("--jev-live", action="store_true", default=False, help="Enable explicitly authorized TypeSafe live smoke")

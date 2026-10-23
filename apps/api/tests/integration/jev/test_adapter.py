@@ -56,3 +56,64 @@ def test_transport_errors(exc,error):
     def handler(req):raise exc("secret-state",request=req)
     with pytest.raises(error) as caught:evaluate(handler)
     assert "secret-state" not in str(caught.value)
+
+
+@pytest.mark.parametrize("mutation", ["missing","extra","unknown","invalid","wrong_type","wrong_choice","wrong_scale","invalid_json"])
+def test_invalid_sdk_responses(mutation):
+    data=body()
+    if mutation=="missing":del data["answers"]["category"]
+    if mutation=="extra":data["answers"]["extra"]={"type":"noul","noul":0.5}
+    if mutation=="unknown":data["answers"]["category"]={"type":"future","value":1}
+    if mutation=="invalid":data["answers"]["needs_action"]["noul"]=1.1
+    if mutation=="wrong_type":data["answers"]["category"]={"type":"noul","noul":0.5}
+    if mutation=="wrong_choice":data["answers"]["category"]["choice"]="unknown"
+    if mutation=="wrong_scale":data["answers"]["urgency"]["score"]=3.0
+    def handler(req):return httpx2.Response(200,content=b'not json') if mutation=="invalid_json" else httpx2.Response(200,json=data)
+    with pytest.raises(DecisionInvalidResponseError):evaluate(handler)
+
+
+def test_sdk_warning_sanitizes_question_names(caplog):
+    secret="secret-user-text"
+    data=body();data["answers"][secret]={"type":"future","value":secret}
+    with caplog.at_level(logging.DEBUG,logger="typesafe_sdk"):
+        # Adapter construction restores the required WARNING level before any request.
+        evaluate(lambda req:httpx2.Response(200,json=data))
+    assert secret not in caplog.text
+    assert "typesafe_sdk_warning" in caplog.text
+
+
+def test_no_request_id_and_absent_usage_metadata():
+    data=body();data["usage"]={}
+    result=evaluate(lambda req:httpx2.Response(200,json=data))
+    assert result.provider_request_id is None
+    assert result.input_tokens is None and result.output_tokens is None
+
+
+def test_retry_after_is_honored_without_real_sleep():
+    from unittest.mock import AsyncMock
+    async def scenario():
+        calls=[]
+        def handler(req):
+            calls.append(req)
+            return httpx2.Response(429,json={"error":"limited"},headers={"Retry-After":"2"}) if len(calls)==1 else httpx2.Response(200,json=body())
+        async with sdk.AsyncTypeSafeClient(api_key="test-key",model="jev-1.13.0",transport=httpx2.MockTransport(handler),retry=sdk.RetryPolicy(max_retries=1,timeout=10)) as client:
+            sleep=AsyncMock();client._retry.sleep=sleep
+            result=await TypeSafeDecisionAdapter(client).evaluate(request())
+            assert result.model=="jev-1.13.0" and len(calls)==2
+            sleep.assert_awaited_once()
+            assert float(sleep.call_args.args[0])==2.0
+    asyncio.run(scenario())
+
+
+def test_retry_budget_rejects_delay_without_sleep():
+    calls=[]
+    def handler(req):
+        calls.append(req)
+        return httpx2.Response(429,json={"error":"limited"},headers={"Retry-After":"20"})
+    with pytest.raises(DecisionRateLimitedError):evaluate(handler,retries=1)
+    assert len(calls)==1
+
+
+def test_actual_provider_model_is_preserved():
+    data=body();data["model"]="jev-1.14.0"
+    assert evaluate(lambda req:httpx2.Response(200,json=data)).model=="jev-1.14.0"
