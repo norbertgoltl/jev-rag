@@ -46,4 +46,6 @@ Az entrypoint a Settings `API_HOST` és `API_PORT` értékével indít Uvicornt,
 | `GET /docs` | Swagger UI |
 | `GET /openapi.json` | Generált OpenAPI |
 
-A Qdrant readiness HTTPX runtime klienssel működik. Nincs Jev-integráció vagy RAG. Részletek: [backend fejlesztői útmutató](../../docs/development/backend.md), [HTTP-contract](../../docs/architecture/interface-contracts.md).
+A Qdrant readiness HTTPX runtime klienssel működik. Jev DecisionPort integration is available; RAG is not implemented. Részletek: [backend fejlesztői útmutató](../../docs/development/backend.md), [HTTP-contract](../../docs/architecture/interface-contracts.md).
+
+See docs/development/jev-integration.md for the TypeSafe integration.

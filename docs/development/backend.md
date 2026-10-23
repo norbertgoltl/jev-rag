@@ -2,7 +2,7 @@
 
 ## Konfiguráció
 
-A `Settings` Pydantic Settings modell prioritása: explicit értékek, process environment, root `.env`, alapértelmezések. A `.env` abszolút útvonala a forrásfájl helyéből származik, nem az indítási könyvtárból. A hiányzó `.env` megengedett, az ismeretlen Compose/Jev mezők figyelmen kívül maradnak. A fájl nem fut le shell kódként.
+A `Settings` Pydantic Settings modell prioritása: explicit értékek, process environment, root `.env`, alapértelmezések. A `.env` abszolút útvonala a forrásfájl helyéből származik, nem az indítási könyvtárból. A hiányzó `.env` megengedett, az ismeretlen mezők figyelmen kívül maradnak, a Jev-beállítások típusosan validáltak. A fájl nem fut le shell kódként.
 
 | Változó | Default | Validáció |
 | --- | --- | --- |
@@ -42,3 +42,5 @@ A hivatalos `jev-rag-api` indító kikapcsolja az Uvicorn access logját és JSO
 A tesztek fake readiness probe-ot és HTTPX/TestClient transportot használnak, Docker és AI-kulcs nélkül. Vizsgálandó a két readiness állapot és timeout, a külső hívást nem végző liveness/status, CORS, konfigurációprioritás, 404/405/422/500/503, request ID és párhuzamosság, valamint a logok adatvédelme.
 
 Az aktuális végrehajtási állapot az [API README-ben](../../apps/api/README.md) található. A 36 pytest teszt és a hoston futó Uvicorn HTTP-smoke ellenőrzése sikeres, az utóbbi után a tesztszerver leállt. A Qdrant/Jev továbbra sem része ennek az ellenőrzésnek.
+
+Az FND-018–020 döntési integráció konfigurációja és tesztelése: [Jev integráció](jev-integration.md).

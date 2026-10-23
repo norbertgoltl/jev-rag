@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Literal, Self
 from urllib.parse import urlsplit
 
-from pydantic import Field, HttpUrl, field_validator, model_validator
+from pydantic import Field, HttpUrl, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_ENV_FILE = Path(__file__).resolve().parents[5] / ".env"
@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     )
     qdrant_url: HttpUrl = HttpUrl("http://127.0.0.1:6333")
     qdrant_timeout_seconds: float = Field(default=1.0, gt=0, allow_inf_nan=False)
+
+    jev_mode: Literal["mock", "live", "disabled"] | None = None
+    typesafe_api_key: SecretStr | None = Field(default=None, repr=False)
+    typesafe_model: Literal["jev-1.13.0"] = "jev-1.13.0"
+    typesafe_timeout_seconds: float = Field(default=5.0, gt=0, allow_inf_nan=False)
+    typesafe_retry_max: int = Field(default=1, ge=0)
+    typesafe_retry_budget_seconds: float = Field(default=10.0, gt=0, allow_inf_nan=False)
 
     @field_validator("cors_allowed_origins")
     @classmethod
@@ -53,4 +60,12 @@ class Settings(BaseSettings):
     def validate_environment(self) -> Self:
         if self.app_env == "production" and self.app_debug:
             raise ValueError("Debug mode is forbidden in production")
+        if self.app_env == "production" and self.jev_mode not in {"live", "disabled"}:
+            raise ValueError("Production requires explicit live or disabled Jev mode")
+        if self.jev_mode is None:
+            self.jev_mode = "mock"
+        if self.jev_mode == "live":
+            key = self.typesafe_api_key.get_secret_value() if self.typesafe_api_key else ""
+            if not key or not key.isascii() or any(char.isspace() or ord(char) < 33 or ord(char) == 127 for char in key):
+                raise ValueError("Live Jev mode requires a valid API key")
         return self
