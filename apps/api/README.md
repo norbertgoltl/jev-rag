@@ -1,7 +1,7 @@
 # Backend workspace
 
-A Python-projekt gyökere ez a könyvtár. Az FND-008 hozza létre a `pyproject.toml`, `.python-version` és `uv.lock` fájlokat, valamint a projektlokális `.venv` környezetet. A terv szerinti Python-verzió `3.14.8`, uv által kezelve.
+Az FND-008 önálló Python-projektje elkészült: uv-managed CPython `3.14.8`, `src/jev_rag_api` package, `uv_build`, rögzített `uv.lock` és projektlokális `.venv`.
 
-A FastAPI-váz az FND-009–011 feladata. Jelenleg nincs indítható backend. Nincs gyökérszintű Python-projekt vagy uv workspace, a Python-függőségek nem kerülnek a pnpm workspace-be.
+A repository gyökeréből `make setup-api` telepíti a rögzített függőségeket. A lockfile ellenőrzése: `uv lock --project apps/api --check`. A virtuális környezet nem verziókezelendő, globális projektfüggőség nincs.
 
-A backend konfigurációja később a repository gyökerében lévő `.env` fájlból, explicit útvonallal töltődik be. A fájlt shellből végrehajtani tilos.
+A FastAPI alkalmazásváz az FND-009, a konfiguráció az FND-010, a hibakezelés és logging az FND-011 feladata. Ebben az állapotban még nincs futó API.

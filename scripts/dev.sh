@@ -13,6 +13,7 @@ Available now:
   help        Show the developer command interface
   doctor      Check local tools and version pins without installing anything
   smoke       Run offline developer CLI smoke checks
+  setup-api   Install locked backend dependencies
 
 Requires later Foundation tasks:
   setup       Install locked API and web dependencies (FND-008, FND-012)
@@ -30,6 +31,13 @@ Requires later Foundation tasks:
 
 Unavailable subsystems fail explicitly. No command sources .env as shell code.
 HELP
+        ;;
+    setup-api)
+        require_file apps/api/pyproject.toml FND-008
+        require_file apps/api/uv.lock FND-008
+        require_command uv 'Install uv using its official installation guide.'
+        cd "$REPO_ROOT"
+        exec uv sync --project "$REPO_ROOT/apps/api" --managed-python --locked
         ;;
     setup)
         # Validate both workspaces before installing either dependency set.
