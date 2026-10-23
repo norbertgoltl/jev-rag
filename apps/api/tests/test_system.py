@@ -24,6 +24,7 @@ def test_cors_preflight(settings, origin, allowed):
         })
     assert response.status_code == (200 if allowed else 400)
     assert ("access-control-allow-origin" in response.headers) == allowed
+    assert "x-request-id" in response.headers
     assert "access-control-allow-credentials" not in response.headers
 
 
