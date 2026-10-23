@@ -17,5 +17,8 @@ dev = ["pytest>=8,<10", "httpx>=0.28,<1"]
 requires = ["uv_build>=0.13,<0.14"]
 build-backend = "uv_build"
 
+[project.scripts]
+jev-rag-api = "jev_rag_api.server:main"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

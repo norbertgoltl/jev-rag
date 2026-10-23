@@ -40,7 +40,7 @@ A döntés moduláris FastAPI backend, Next.js frontend, külön Jev döntési a
 
 ## Monorepo és fejlesztői környezet
 
-Az FND-005–007 alapstruktúrája és fejlesztői CLI-je elkészült. Elsődleges környezet: macOS Apple Silicon, POSIX shell és GNU/BSD Make. A rögzített Node.js-verzió `24.13.0`, a pnpm-verzió `12.6.0`. A Python célverziója uv-managed `3.14.8`, a backend inicializálása az FND-008 része.
+Az FND-005–007 alapstruktúrája és fejlesztői CLI-je elkészült. Elsődleges környezet: macOS Apple Silicon, POSIX shell és GNU/BSD Make. A rögzített Node.js-verzió `24.13.0`, a pnpm-verzió `12.6.0`. A backend uv-managed Python `3.14.8` interpretert használ, az FND-008–011 megvalósult.
 
 | Könyvtár | Felelősség |
 | --- | --- |
@@ -61,8 +61,10 @@ make smoke
 
 A `doctor` csak ellenőriz, hiányzó eszköz vagy verzióeltérés esetén hibával lép ki. A legutóbbi futás sikeres, 0 kilépési kóddal, az uv-managed Python `3.14.8` és minden ellenőrzött eszköz megfelelő. A `smoke` offline, szimulált eszközökkel ellenőrzi a CLI-t.
 
-A backend és frontend még nem indítható. A `setup` hiányzó manifest vagy lockfile esetén leáll. Az alkalmazás-, infrastruktúra- és quality parancsok a későbbi Foundation-feladatok elkészültéig érthető hibát adnak.
+Az FND-008–011 backendje elkészült: rögzített függőségek, 36 sikeres teszt, sikeres build és élő HTTP-smoke ellenőrzés. Részletek: [API README](apps/api/README.md). A frontend még nem indítható. A `setup` hiányzó manifest vagy lockfile esetén leáll. A frontend-, infrastruktúra- és teljes quality parancsok a későbbi Foundation-feladatok elkészültéig érthető hibát adnak.
 
 A Python-projekt gyökere `apps/api`, a pnpm workspace gyökere a repository. Az API lockfile-ja `apps/api/uv.lock`, a frontendé az egyetlen root `pnpm-lock.yaml` lesz. A FastAPI és Next.js a hoston, csak az infrastruktúra Dockerben fut majd.
 
 Részletek: [fejlesztői környezet, parancsok és Git-workflow](docs/development/workflow.md).
+
+A backendhez előkészített parancsok: `make setup-api`, `make dev-api`, `make test-api`. Ezek a rögzített `apps/api/uv.lock` alapján futnak.

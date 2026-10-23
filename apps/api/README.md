@@ -1,7 +1,49 @@
-# Backend workspace
+# Jev RAG API
 
-Az FND-008 önálló Python-projektje elkészült: uv-managed CPython `3.14.8`, `src/jev_rag_api` package, `uv_build`, rögzített `uv.lock` és projektlokális `.venv`.
+Önálló `src/jev_rag_api` projekt, `uv_build` build backenddel, uv-managed CPython `3.14.8` interpreterrel. A virtuális környezet helye `apps/api/.venv`. Nincs root uv workspace vagy globális projektfüggőség.
 
-A repository gyökeréből `make setup-api` telepíti a rögzített függőségeket. A lockfile ellenőrzése: `uv lock --project apps/api --check`. A virtuális környezet nem verziókezelendő, globális projektfüggőség nincs.
+## Ellenőrzési állapot
 
-A FastAPI alkalmazásváz az FND-009, a konfiguráció az FND-010, a hibakezelés és logging az FND-011 feladata. Ebben az állapotban még nincs futó API.
+Az FND-008–011 megvalósítása ellenőrzött: a valódi `uv.lock` elkészült, a projekt editable módban települt az `apps/api/.venv` környezetbe. A 36 backendteszt, a lockfile-ellenőrzés, a wheel/sdist build és az élő HTTP smoke teszt sikeres CPython `3.14.8` alatt.
+
+Az élő szerver mind az öt dokumentált végpontja és a request ID headerek ellenőrzöttek, a readiness Qdrant nélkül 503. A szerverlogok JSON formátumúak. A developer CLI smoke tesztjei is sikeresek. A Starlette TestClient az előírt HTTPX használatára deprecation warningot ad, a tesztek ettől sikeresek. A HTTPX2 migráció külön függőségváltoztatás lehet.
+
+## Setup és futtatás
+
+A függőségek feloldása csak explicit függőségváltoztatáskor:
+
+```sh
+uv lock --project apps/api
+```
+
+Az `apps/api/uv.lock` a rögzített függőségeket tartalmazza és verziókezelendő. Normál fejlesztéskor a repository gyökeréből:
+
+```sh
+make setup-api
+make test-api
+make dev-api
+```
+
+A parancsok kizárólag létező lockfile alapján, `--locked` módban futnak. A `make setup` továbbra is igényli a frontend manifestjét és lockfile-ját. A teljes quality gate az FND-021–022 része.
+
+Közvetlen ellenőrzések:
+
+```sh
+uv sync --project apps/api --managed-python --locked
+uv lock --project apps/api --check
+uv run --project apps/api --managed-python --locked pytest
+uv run --project apps/api --managed-python --locked python -c 'import jev_rag_api'
+uv run --project apps/api --managed-python --locked jev-rag-api
+```
+
+Az entrypoint a Settings `API_HOST` és `API_PORT` értékével indít Uvicornt, alapból `127.0.0.1:8000` címen, development módban reloaddal. Az importálható ASGI alkalmazás `jev_rag_api.main:app`, a factory `create_app(settings=..., readiness_probe=...)`.
+
+| Végpont | Elvárt működés |
+| --- | --- |
+| `GET /health/live` | 200, `{"status":"alive"}`, külső hívás nélkül |
+| `GET /health/ready` | Alapból 503, Qdrant `down`, fake probe-bal 200/503 |
+| `GET /api/v1/system/status` | 200, `{"service":"api","status":"ok"}` |
+| `GET /docs` | Swagger UI |
+| `GET /openapi.json` | Generált OpenAPI |
+
+Nincs valódi Qdrant-/Jev-integráció vagy RAG. Részletek: [backend fejlesztői útmutató](../../docs/development/backend.md), [HTTP-contract](../../docs/architecture/interface-contracts.md).
