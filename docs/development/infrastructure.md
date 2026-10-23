@@ -14,4 +14,8 @@ Qdrant qdrant/qdrant:v1.19.2 uses linux/arm64, publishes only 127.0.0.1:${QDRANT
 
 Normal down preserves volumes. Never use down -v for development data. Docker Desktop factory reset or data deletion may destroy named volumes. A volume is not a backup. Image upgrades require a separate storage/migration compatibility review. No application collections are created.
 
-Validation: pinned ARM64 image pulled successfully and Compose configuration validated.
+## Health and persistence
+
+The read-only Bash helper checks HTTP /readyz and accepts only status 200. The pinned ARM64 image has been verified to support Bash TCP. Health interval is 10s, timeout 3s, retries 5 and start period 15s. FastAPI owns an HTTPX async client in its lifespan and checks Qdrant readiness through the adapter. Network failures and timeouts produce a sanitized structured warning and readiness 503, while liveness remains 200. Readiness recovers to 200 when Qdrant returns. The existing check_health port remains compatible with the new check method.
+
+Validation: 43 backend tests pass. Isolated Docker acceptance during implementation verified collection and point persistence across container recreation, and API readiness 200/503/200. The lifecycle test command is added by FND-017. HTTPX moved from the dev group to runtime without changing package versions.

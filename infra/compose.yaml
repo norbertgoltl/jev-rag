@@ -8,5 +8,12 @@ services:
       - "127.0.0.1:${QDRANT_HOST_PORT:-6333}:6333"
     volumes:
       - qdrant_data:/qdrant/storage
+      - ../scripts/qdrant-healthcheck.sh:/usr/local/bin/qdrant-healthcheck.sh:ro
+    healthcheck:
+      test: ["CMD", "bash", "/usr/local/bin/qdrant-healthcheck.sh"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
 volumes:
   qdrant_data:

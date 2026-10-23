@@ -41,9 +41,9 @@ Az entrypoint a Settings `API_HOST` és `API_PORT` értékével indít Uvicornt,
 | Végpont | Elvárt működés |
 | --- | --- |
 | `GET /health/live` | 200, `{"status":"alive"}`, külső hívás nélkül |
-| `GET /health/ready` | Alapból 503, Qdrant `down`, fake probe-bal 200/503 |
+| `GET /health/ready` | Valódi Qdrant HTTP probe, 200 ha ready, egyébként 503 |
 | `GET /api/v1/system/status` | 200, `{"service":"api","status":"ok"}` |
 | `GET /docs` | Swagger UI |
 | `GET /openapi.json` | Generált OpenAPI |
 
-Nincs valódi Qdrant-/Jev-integráció vagy RAG. Részletek: [backend fejlesztői útmutató](../../docs/development/backend.md), [HTTP-contract](../../docs/architecture/interface-contracts.md).
+A Qdrant readiness HTTPX runtime klienssel működik. Nincs Jev-integráció vagy RAG. Részletek: [backend fejlesztői útmutató](../../docs/development/backend.md), [HTTP-contract](../../docs/architecture/interface-contracts.md).
