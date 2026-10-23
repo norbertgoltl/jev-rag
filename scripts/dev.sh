@@ -18,12 +18,15 @@ Available now:
   dev-web     Start the host Next.js development server
   test-api    Run offline backend tests
 
+  health      Check Qdrant HTTP readiness
+  infra-test  Run isolated infrastructure acceptance tests
+  up          Start Qdrant and wait for health
+  down        Stop project infrastructure, preserving volumes
+  status      Show project container health
+  logs        Follow Qdrant logs (Ctrl-C stops following)
+
 Requires later Foundation tasks:
   setup       Install locked API and web dependencies (FND-008, FND-012)
-  up          Start Docker infrastructure (FND-015)
-  down        Stop infrastructure, preserving volumes (FND-015)
-  status      Show infrastructure status (FND-015)
-  logs        Show infrastructure logs (FND-015)
   lint        Check backend and frontend lint (FND-021, FND-022)
   format      Format backend and frontend sources (FND-021, FND-022)
   typecheck   Check Python and TypeScript types (FND-021, FND-022)
@@ -47,8 +50,10 @@ HELP
         uv sync --project "$REPO_ROOT/apps/api" --managed-python --locked
         pnpm install --frozen-lockfile
         ;;
-    up|down|status|logs)
-        fail 'Infrastructure commands are not implemented. Complete FND-015–017 first. No containers or volumes were changed.'
+    up|down|status|logs|health|infra-test)
+        require_command uv 'Install uv first.'
+        cd "$REPO_ROOT"
+        exec uv run --project apps/api --managed-python --locked python scripts/infrastructure.py "$1"
         ;;
     dev-api)
         require_file apps/api/pyproject.toml FND-008
