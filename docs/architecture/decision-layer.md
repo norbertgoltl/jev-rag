@@ -18,4 +18,6 @@ A result pontosan a kért question-ID-kra ad azonos primitívű választ. A Choi
 
 A MockDecisionAdapter teljes request alapján kulcsolt, explicit fixture-öket használ. Nincs hálózat, véletlenszám vagy automatikus válaszgenerálás. Azonos request és fixture azonos eredményt ad. Hiányzó vagy hibás fixture DecisionInvalidResponseError. Tesztek domain hibát is beállíthatnak. A szintetikus probability és confidence nem a Jev pontosságának mérése.
 
-The live SDK adapter and provider are introduced in FND-019.
+A TypeSafeDecisionAdapter a hivatalos `typesafe-sdk==0.7.5` AsyncTypeSafeClient kliensét használja. Egy evaluate egy system_one hívás több névvel azonosított kérdését küldi. A mapper az SDK Choice/Score/Noul típusait használja, majd a SystemOneResponse eredményét újra validálja a belső kéréshez képest. Az SDK által kihagyott ismeretlen primitív hiányzó válaszként elutasítandó.
+
+A kliens a FastAPI lifespan alatt egyszer jön létre workerfolyamatonként és shutdownkor aszinkron lezáródik. A DecisionPort FastAPI dependency providerből érhető el és tesztben override-olható. Mock/disabled módban a valódi SDK-kliens nem inicializálódik. A Qdrant readiness és a döntési képesség független egymástól. Nem jött létre nyilvános Jev HTTP-endpoint.

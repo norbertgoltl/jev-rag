@@ -9,6 +9,7 @@ dependencies = [
   "pydantic>=2,<3",
   "pydantic-settings>=2,<3",
   "httpx>=0.28,<1",
+  "typesafe-sdk==0.7.5",
 ]
 
 [dependency-groups]

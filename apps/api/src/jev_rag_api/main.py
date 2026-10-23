@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 import httpx
 
@@ -9,6 +9,8 @@ from starlette.types import ASGIApp
 
 from jev_rag_api.api.router import router
 from jev_rag_api.application.ports.readiness import ReadinessProbe
+from jev_rag_api.application.ports.decision import DecisionPort
+from jev_rag_api.integrations.jev.provider import decision_provider
 from jev_rag_api.integrations.qdrant.readiness import QdrantReadinessProbe
 from jev_rag_api.core.config import Settings
 from jev_rag_api.core.errors import register_error_handlers
@@ -18,19 +20,24 @@ from jev_rag_api.core.middleware import RequestContextMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    if app.state.readiness_probe is not None:
-        yield
-        return
     config = app.state.settings
-    async with httpx.AsyncClient(
-        base_url=str(config.qdrant_url).rstrip("/") + "/",
-        timeout=config.qdrant_timeout_seconds, trust_env=False, follow_redirects=False,
-    ) as client:
-        app.state.readiness_probe = QdrantReadinessProbe(client)
+    async with AsyncExitStack() as stack:
+        app.state.decision_port = await stack.enter_async_context(
+            decision_provider(config, app.state.decision_override)
+        )
+        owns_probe = app.state.readiness_probe is None
+        if owns_probe:
+            client = await stack.enter_async_context(httpx.AsyncClient(
+                base_url=str(config.qdrant_url).rstrip("/") + "/",
+                timeout=config.qdrant_timeout_seconds, trust_env=False, follow_redirects=False,
+            ))
+            app.state.readiness_probe = QdrantReadinessProbe(client)
         try:
             yield
         finally:
-            app.state.readiness_probe = None
+            app.state.decision_port = None
+            if owns_probe:
+                app.state.readiness_probe = None
 
 
 class FoundationAPI(FastAPI):
@@ -48,6 +55,7 @@ class FoundationAPI(FastAPI):
 
 def create_app(
     settings: Settings | None = None, readiness_probe: ReadinessProbe | None = None,
+    decision_port: DecisionPort | None = None,
 ) -> FastAPI:
     config = settings if settings is not None else Settings()
     configure_logging(config.log_level)
@@ -55,6 +63,8 @@ def create_app(
     application = FoundationAPI(title="Jev RAG Foundation API", version="0.1.0", lifespan=lifespan)
     application.state.settings = config
     application.state.readiness_probe = readiness_probe
+    application.state.decision_override = decision_port
+    application.state.decision_port = None
     register_error_handlers(application)
     application.include_router(router)
     return application
