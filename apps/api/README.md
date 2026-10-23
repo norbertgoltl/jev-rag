@@ -1,7 +1,7 @@
-# Backend workspace
+# FastAPI Foundation
 
-Az FND-008 önálló Python-projektje elkészült: uv-managed CPython `3.14.8`, `src/jev_rag_api` package, `uv_build`, rögzített `uv.lock` és projektlokális `.venv`.
+Az FND-008–009 Python-projektje és FastAPI-váza elkészült. `make setup-api`, `make test-api` és `make dev-api` használható a repository gyökeréből. Az alkalmazás `127.0.0.1:8000` címen indul, hoston, uv-környezetben.
 
-A repository gyökeréből `make setup-api` telepíti a rögzített függőségeket. A lockfile ellenőrzése: `uv lock --project apps/api --check`. A virtuális környezet nem verziókezelendő, globális projektfüggőség nincs.
+A liveness és a system status külső szolgáltatás nélkül 200-at ad. Az alapértelmezett readiness 503, a fake probe tesztben 200/503 állapotot adhat. `/docs` és `/openapi.json` elérhető, a CORS kizárólag a frontend explicit originjét engedi.
 
-A FastAPI alkalmazásváz az FND-009, a konfiguráció az FND-010, a hibakezelés és logging az FND-011 feladata. Ebben az állapotban még nincs futó API.
+A típusos konfiguráció az FND-010, a hibák, request ID és JSON logging az FND-011 feladata. Qdrant/Jev SDK nem része ennek a PR-nek.

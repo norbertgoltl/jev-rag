@@ -92,10 +92,13 @@ for tool in dirname cat sed; do
     ln -s "$(command -v "$tool")" "$smoke_dir/missing-tools/$tool"
 done
 expect_failure 'Missing uv' env PATH="$smoke_dir/missing-tools" /bin/sh "$fixture_root/scripts/doctor.sh"
-for target in up down status logs dev-api dev-web lint format typecheck test check; do
+for target in up down status logs dev-web lint format typecheck test check; do
     expect_failure 'not implemented' "$MAKE_BIN" -C "$fixture_root" "$target"
 done
 expect_failure 'Missing apps/api/pyproject.toml' "$MAKE_BIN" -C "$fixture_root" setup
+for target in setup-api test-api dev-api; do
+    expect_failure 'Missing apps/api/pyproject.toml' "$MAKE_BIN" -C "$fixture_root" "$target"
+done
 [ ! -s "$CLI_SMOKE_LOG" ]
 
 # Synthetic workspaces exercise delegation without installing dependencies.
@@ -121,4 +124,10 @@ expected_commands=$(printf 'uv sync --project %s/apps/api --managed-python --loc
     exit 1
 }
 [ ! -e "$smoke_dir/env-was-executed" ]
+: > "$CLI_SMOKE_LOG"
+"$MAKE_BIN" -C "$fixture_root" setup-api > "$smoke_output"
+"$MAKE_BIN" -C "$fixture_root" test-api > "$smoke_output"
+"$MAKE_BIN" -C "$fixture_root" dev-api > "$smoke_output"
+expected_commands=$(printf 'uv sync --project %s/apps/api --managed-python --locked\nuv run --project %s/apps/api --managed-python --locked pytest %s/apps/api/tests\nuv run --project %s/apps/api --managed-python --locked jev-rag-api' "$fixture_root" "$fixture_root" "$fixture_root" "$fixture_root")
+[ "$(cat "$CLI_SMOKE_LOG")" = "$expected_commands" ] || exit 1
 printf 'PASS: CLI diagnostics, GNU/BSD version detection, unavailable targets, locked setup, failure propagation, space-containing paths and .env isolation\n'
