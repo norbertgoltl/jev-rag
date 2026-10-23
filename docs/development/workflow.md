@@ -37,7 +37,7 @@ Hivatalos háttér: [Node.js kiadások](https://nodejs.org/en/about/previous-rel
 
 Nincs root Python-projekt, uv workspace, frontend saját lockfile vagy előre létrehozott shared/agent/embedding csomag. Az alkalmazásgyökereket jelenleg a saját README-jük tartja fenn, üres `.gitkeep` nélkül.
 
-Az `apps/api/uv.lock` az FND-008, a root `pnpm-lock.yaml` az FND-012 során jön létre. A későbbi lockfile-ok és runtime-pinek verziókezelendők. A setup nem generálhat hiányzó lockfile-t, és nem oldhat fel új verziókat.
+Az `apps/api/uv.lock` az FND-008 során elkészült, a root `pnpm-lock.yaml` az FND-012 feladata. A későbbi lockfile-ok és runtime-pinek verziókezelendők. A setup nem generálhat hiányzó lockfile-t, és nem oldhat fel új verziókat.
 
 ## Jelenleg futtatható parancsok
 
@@ -61,11 +61,11 @@ Más könyvtárból `make -C /absolute/path/to/jev-rag help` használható. A sh
 
 | Parancs | Delegálás vagy jelenlegi akadály |
 | --- | --- |
-| `make setup` | Előbb ellenőrzi mindkét workspace manifestjét, az API Python-pinjét és mindkét lockfile-t. Ezután `uv sync --project apps/api --managed-python --locked`, majd root `pnpm install --frozen-lockfile`. Jelenleg FND-008 és FND-012 hiányzik. |
+| `make setup` | Előbb ellenőrzi mindkét workspace manifestjét, az API Python-pinjét és mindkét lockfile-t. Ezután `uv sync --project apps/api --managed-python --locked`, majd root `pnpm install --frozen-lockfile`. Jelenleg a frontend manifestje és lockfile-ja hiányzik (FND-012). |
 | `make up` | FND-015–017 hiányzik. Később csak Docker-infrastruktúrát indít. |
 | `make down` | FND-015–017 hiányzik. Később megőrzi a volume-okat és a hoston futó appokat. |
 | `make status`, `make logs` | FND-015–017 hiányzik. |
-| `make dev-api` | FND-008–011 hiányzik. Később hoston, uv-környezetben, loopback címen fut. |
+| `make dev-api` | Hoston futó FastAPI indítása, uv-környezetben, alapértelmezetten loopback címen. |
 | `make dev-web` | FND-012–014 hiányzik. Később hoston, pnpm-mel, loopback címen fut. |
 | `make lint`, `make format`, `make typecheck`, `make test` | FND-021–022 minőségellenőrzései hiányoznak. |
 | `make check` | FND-021–022 hiányzik. Később nem módosító lint, format-check, typecheck, teszt és frontend build. |
@@ -103,3 +103,7 @@ Commit előtt `git status --short`, `git diff --check` és `make smoke` futtatan
 A struktúra, workspace-metaadatok, Git/editor szabályok, PR-sablon, CLI és smoke tesztek elkészültek. A `make help` és a `make smoke` sikeres. A Python-környezet javítása után a valódi `make doctor` is sikeresen lefutott, 0 kilépési kóddal. Az uv-managed Python `3.14.8`, Node.js `24.13.0`, pnpm `12.6.0`, Git, Make, uv, Corepack és Docker Compose ellenőrzése megfelelő. A diagnosztika nem telepített vagy módosított eszközt, alkalmazás- és infrastruktúra-készenlétet nem vizsgál.
 
 A backend, frontend, infrastruktúra és alkalmazásminőség-ellenőrzések a megjelölt későbbi feladatokhoz tartoznak. Ezekhez a mostani CLI nem jelent hamis sikert.
+
+## FND-008–011 ellenőrzési állapot
+
+Elkészült a backend, a típusos konfiguráció, a hibakezelés és a JSON logging. A valódi uv.lock alapján a projekt települt. A 36 backendteszt, a lockfile-ellenőrzés, a wheel/sdist build, az élő host HTTP smoke és a módosított CLI smoke teszt sikeres. A readiness valódi Qdrant-adapter nélkül továbbra is 503. Részletek és parancsok: [API README](../../apps/api/README.md), [backend konfiguráció](backend.md).
