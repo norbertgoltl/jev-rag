@@ -49,7 +49,7 @@ Az FND-005–007 alapstruktúrája és fejlesztői CLI-je elkészült. Elsődleg
 | `infra/compose` | Docker-infrastruktúra |
 | `scripts` | Fejlesztői parancsok és smoke tesztek |
 | `docs` | Architektúra, ADR-ek és fejlesztői útmutatók |
-| `.github` | PR-sablon, később CI |
+| `.github` | PR-sablon és GitHub Actions CI |
 
 A repository gyökeréből futtatható:
 
@@ -59,9 +59,9 @@ make doctor
 make smoke
 ```
 
-A `doctor` csak ellenőriz, hiányzó eszköz vagy verzióeltérés esetén hibával lép ki. A legutóbbi futás sikeres, 0 kilépési kóddal, az uv-managed Python `3.14.8` és minden ellenőrzött eszköz megfelelő. A `smoke` offline, szimulált eszközökkel ellenőrzi a CLI-t.
+A `doctor` csak ellenőriz, hiányzó eszköz vagy verzióeltérés esetén hibával lép ki. A `smoke` offline, szimulált eszközökkel ellenőrzi a CLI-t.
 
-Az FND-008–011 backendje elkészült: rögzített függőségek, 36 sikeres teszt, sikeres build és élő HTTP-smoke ellenőrzés. Részletek: [API README](apps/api/README.md). A frontend még nem indítható. A `setup` hiányzó manifest vagy lockfile esetén leáll. A frontend-, infrastruktúra- és teljes quality parancsok a későbbi Foundation-feladatok elkészültéig érthető hibát adnak.
+Az FND-008–011 backendje elkészült: rögzített függőségek, backend tesztek és élő HTTP-smoke ellenőrzés. Részletek: [API README](apps/api/README.md).
 
 A Python-projekt gyökere `apps/api`, a pnpm workspace gyökere a repository. Az API lockfile-ja `apps/api/uv.lock`, a frontendé az egyetlen root `pnpm-lock.yaml` lesz. A FastAPI és Next.js a hoston, csak az infrastruktúra Dockerben fut majd.
 
@@ -73,4 +73,4 @@ Az FND-012–014 frontend alap elkészült. Indítás: `make dev-web`. Telepít�
 
 Qdrant infrastruktúra: `make up`, `make health`, `make status`, `make down`. Előfeltételek, named volume és izolált tesztek: [infrastruktúra](docs/development/infrastructure.md).
 
-A Jev DecisionPort és TypeSafe SDK integráció elkészült. Offline tesztek: `make test`. Konfiguráció és külön engedélyezhető live smoke: [Jev integráció](docs/development/jev-integration.md).
+A Jev DecisionPort és TypeSafe SDK integráció elkészült. Quality gate: `make check`. Tesztelési és CI útmutató: [testing](docs/development/testing.md), [CI](docs/development/ci.md). Konfiguráció és külön engedélyezhető live smoke: [Jev integráció](docs/development/jev-integration.md).

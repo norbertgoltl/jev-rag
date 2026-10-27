@@ -33,7 +33,7 @@ Hivatalos háttér: [Node.js kiadások](https://nodejs.org/en/about/previous-rel
 | `scripts/` | Fejlesztői CLI és offline smoke tesztek |
 | `docs/architecture/`, `docs/adr/`, `docs/foundation/` | Architektúra, döntések, fázishatárok |
 | `docs/development/` | Setup és fejlesztési workflow |
-| `.github/` | PR-sablon, később CI |
+| `.github/` | PR-sablon és GitHub Actions CI |
 
 Nincs root Python-projekt, uv workspace, frontend saját lockfile vagy előre létrehozott shared/agent/embedding csomag. Az alkalmazásgyökereket jelenleg a saját README-jük tartja fenn, üres `.gitkeep` nélkül.
 
@@ -67,10 +67,10 @@ Más könyvtárból `make -C /absolute/path/to/jev-rag help` használható. A sh
 | `make status`, `make logs` | Projekt Qdrant állapota és követhető logjai. |
 | `make dev-api` | Hoston futó FastAPI indítása, uv-környezetben, alapértelmezetten loopback címen. |
 | `make dev-web` | A @jev-rag/web dev parancsát hívja, 127.0.0.1:3000 címen. |
-| `make lint`, `make format`, `make typecheck` | FND-021–022 minőségellenőrzései hiányoznak. |
-| `make check` | FND-021–022 hiányzik. Később nem módosító lint, format-check, typecheck, teszt és frontend build. |
+| `make lint`, `make format`, `make typecheck` | Backend és frontend quality gate-ek, lásd a [tesztelési útmutatót](testing.md). |
+| `make check` | Lint, format-check, typecheck, offline teszt coverage-dzsel és frontend production build. |
 
-Minden hiányzó alrendszerhez érthető, nem nulla kilépési kód tartozik. A setup az első telepítési hiba után leáll, nem futtatja a következő csomagkezelőt. A két csomagkezelő telepítése nem közös tranzakció, a sikeres első lépést a második hibája nem vonja vissza. Ismételt setup ugyanazokat a rögzített függőségeket szinkronizálja.
+Minden hiányzó alrendszerhez érthető, nem nulla kilépési kód tartozik. A setup az első telepítési hiba után leáll, nem futtatja a következő csomagkezelőt. A két csomagkezelő telepítése nem közös tranzakció, a sikeres első lépést a második hibája nem vonja vissza. Ismételt setup ugyanazokat a rögzített függőségeket szinkronizálja. A GitHub Actions három külön jobban futtatja az alkalmazás- és infrastruktúra-ellenőrzést, lásd a [CI-útmutatót](ci.md).
 
 A későbbi infrastruktúra-implementáció ellenőrzi a Docker daemon elérhetőségét és a portütközést. Normál leállítás soha nem használhat volume-törlést. A FastAPI és Next.js nem kerül Dockerbe.
 
@@ -90,7 +90,7 @@ Rövid életű branchek a `main` fölött, review és squash merge. Új feladatn
 chore(repo): initialize monorepo development tooling
 ```
 
-Commitüzenethez co-author nem adható. Branch protection és kötelező GitHub CI-check későbbi feladat. A [PR-sablon](../../.github/pull_request_template.md) a scope-ot, változásokat, ellenőrzéseket és kockázatokat rögzíti.
+Commitüzenethez co-author nem adható. A [PR-sablon](../../.github/pull_request_template.md) rögzíti a minőségellenőrzéseket.
 
 Az EditorConfig UTF-8-at, LF-et, végső újsort, Pythonhoz és shellhez 4, TypeScript/JSON/YAML-hez 2 szóközt, Makefile-hoz tabot ír elő. A Git attributes normalizálja a szövegeket és binárisként kezeli a kijelölt médiatípusokat.
 
@@ -102,7 +102,7 @@ Commit előtt `git status --short`, `git diff --check` és `make smoke` futtatan
 
 A struktúra, workspace-metaadatok, Git/editor szabályok, PR-sablon, CLI és smoke tesztek elkészültek. A `make help` és a `make smoke` sikeres. A Python-környezet javítása után a valódi `make doctor` is sikeresen lefutott, 0 kilépési kóddal. Az uv-managed Python `3.14.8`, Node.js `24.22.1`, pnpm `12.15.0`, Git, Make, uv, Corepack és Docker Compose ellenőrzése megfelelő. A diagnosztika nem telepített vagy módosított eszközt, alkalmazás- és infrastruktúra-készenlétet nem vizsgál.
 
-A backend, frontend, infrastruktúra és alkalmazásminőség-ellenőrzések a megjelölt későbbi feladatokhoz tartoznak. Ezekhez a mostani CLI nem jelent hamis sikert.
+Az alkalmazás quality gate parancsai: `make lint`, `make format-check`, `make typecheck`, `make test` és `make check`. Részletek: [tesztelés](testing.md), [CI](ci.md).
 
 ## FND-008–011 ellenőrzési állapot
 
