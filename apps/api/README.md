@@ -24,7 +24,7 @@ make test-api
 make dev-api
 ```
 
-A parancsok kizárólag létező lockfile alapján, `--locked` módban futnak. A `make setup` továbbra is igényli a frontend manifestjét és lockfile-ját. A teljes quality gate az FND-021–022 része.
+A parancsok kizárólag létező lockfile alapján, `--locked` módban futnak. A `make setup` továbbra is igényli a frontend manifestjét és lockfile-ját. A `make check` futtatja a teljes quality gate-et.
 
 Közvetlen ellenőrzések:
 
@@ -52,4 +52,4 @@ A Qdrant readiness HTTPX runtime klienssel működik. A Jev-integráció külön
 
 Az FND-018–020 DecisionPort, mock/live/disabled adapter, TypeSafe SDK 0.7.5 és explicit jev-1.13.0 modell elkészült. Alapból offline mock mód aktív, explicit fixture-ökkel. A live kliens worker-életciklusonként egyszer jön létre és shutdownkor lezárul. A Jev nem módosítja a Qdrant readiness contractot, és nincs új HTTP-végpont.
 
-`make test-api` a backend offline tesztjeit, `make test` a backend és frontend offline tesztjeit futtatja. `make jev-smoke` csak külön `JEV_LIVE_SMOKE=1` költségelfogadással, live móddal és kulccsal indítható. Konfiguráció, hibák, retry és részletes parancsok: [Jev integráció](../../docs/development/jev-integration.md). Szerződések: [Decision Layer](../../docs/architecture/decision-layer.md).
+`make test-backend` a backend offline tesztjeit coverage-dzsel, `make test` a backend és frontend offline tesztjeit futtatja. `make jev-smoke` csak külön `JEV_LIVE_SMOKE=1` költségelfogadással, live móddal és kulccsal indítható. Tesztparancsok: [testing](../../docs/development/testing.md). Konfiguráció, hibák, retry: [Jev integráció](../../docs/development/jev-integration.md). Szerződések: [Decision Layer](../../docs/architecture/decision-layer.md).

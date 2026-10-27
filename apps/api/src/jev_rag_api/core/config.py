@@ -21,9 +21,7 @@ class Settings(BaseSettings):
     api_host: str = Field(default="127.0.0.1", min_length=1)
     api_port: int = Field(default=8000, ge=1, le=65535)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
-    cors_allowed_origins: list[str] = Field(
-        default_factory=lambda: ["http://127.0.0.1:3000"]
-    )
+    cors_allowed_origins: list[str] = Field(default_factory=lambda: ["http://127.0.0.1:3000"])
     qdrant_url: HttpUrl = HttpUrl("http://127.0.0.1:6333")
     qdrant_timeout_seconds: float = Field(default=1.0, gt=0, allow_inf_nan=False)
 
@@ -51,7 +49,7 @@ class Settings(BaseSettings):
             ):
                 raise ValueError("CORS origins must be explicit HTTP origins")
             try:
-                parts.port
+                _ = parts.port
             except ValueError:
                 raise ValueError("Invalid CORS origin port") from None
         return origins
@@ -66,6 +64,10 @@ class Settings(BaseSettings):
             self.jev_mode = "mock"
         if self.jev_mode == "live":
             key = self.typesafe_api_key.get_secret_value() if self.typesafe_api_key else ""
-            if not key or not key.isascii() or any(char.isspace() or ord(char) < 33 or ord(char) == 127 for char in key):
+            if (
+                not key
+                or not key.isascii()
+                or any(char.isspace() or ord(char) < 33 or ord(char) == 127 for char in key)
+            ):
                 raise ValueError("Live Jev mode requires a valid API key")
         return self

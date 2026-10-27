@@ -9,7 +9,7 @@ doctor:
 setup:
 	@sh scripts/dev.sh setup
 
-up down status logs health infra-test jev-smoke dev-api dev-web lint format typecheck test check:
+up down status logs health infra-test jev-smoke dev-api dev-web lint lint-backend lint-frontend format format-check format-check-backend typecheck typecheck-backend typecheck-frontend test test-backend test-frontend build-web check:
 	@sh scripts/dev.sh $@
 
 smoke:
@@ -18,4 +18,4 @@ smoke:
 setup-api test-api:
 	@sh scripts/dev.sh $@
 
-.PHONY: help doctor setup up down status logs health infra-test jev-smoke dev-api dev-web lint format typecheck test check smoke setup-api test-api
+.PHONY: help doctor setup up down status logs health infra-test jev-smoke dev-api dev-web lint lint-backend lint-frontend format format-check format-check-backend typecheck typecheck-backend typecheck-frontend test test-backend test-frontend build-web check smoke setup-api test-api

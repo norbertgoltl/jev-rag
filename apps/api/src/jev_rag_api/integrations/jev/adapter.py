@@ -4,11 +4,16 @@ import time
 import typesafe_sdk as sdk
 
 from jev_rag_api.domain.decisions.errors import (
-    DecisionError, DecisionInvalidRequestError, DecisionAuthenticationError,
-    DecisionRateLimitedError, DecisionUnavailableError, DecisionTimeoutError,
+    DecisionAuthenticationError,
+    DecisionError,
+    DecisionInvalidRequestError,
     DecisionInvalidResponseError,
+    DecisionRateLimitedError,
+    DecisionTimeoutError,
+    DecisionUnavailableError,
 )
 from jev_rag_api.domain.decisions.models import DecisionRequest, DecisionResult
+
 from .mapper import map_questions, map_response
 
 logger = logging.getLogger(__name__)
@@ -39,15 +44,23 @@ class TypeSafeDecisionAdapter:
     async def evaluate(self, request: DecisionRequest) -> DecisionResult:
         started = time.perf_counter()
         try:
-            response = await self.client.system_one(state=request.state, questions=map_questions(request))
+            response = await self.client.system_one(
+                state=request.state, questions=map_questions(request)
+            )
             result = map_response(request, response)
         except sdk.TypeSafeAPITimeoutError:
-            error = DecisionTimeoutError()
+            error: DecisionError = DecisionTimeoutError()
         except sdk.TypeSafeAPIResponseValidationError:
             error = DecisionInvalidResponseError()
         except sdk.TypeSafeAPIError as exc:
             status = exc.status_code if hasattr(exc, "status_code") else exc.status
-            error_type = {400: DecisionInvalidRequestError, 422: DecisionInvalidRequestError, 401: DecisionAuthenticationError, 403: DecisionAuthenticationError, 429: DecisionRateLimitedError}.get(status, DecisionUnavailableError)
+            error_type = {
+                400: DecisionInvalidRequestError,
+                422: DecisionInvalidRequestError,
+                401: DecisionAuthenticationError,
+                403: DecisionAuthenticationError,
+                429: DecisionRateLimitedError,
+            }.get(status, DecisionUnavailableError)
             error = error_type()
         except sdk.TypeSafeAPIConnectionError:
             error = DecisionUnavailableError()
@@ -56,7 +69,24 @@ class TypeSafeDecisionAdapter:
         except DecisionError as exc:
             error = exc
         else:
-            logger.info("jev_decision_completed", extra={"model":result.model,"provider_request_id":result.provider_request_id,"question_count":len(request.questions),"question_types":[q.type for q in request.questions.values()],"duration_ms":round((time.perf_counter()-started)*1000,3),"input_tokens":result.input_tokens})
+            logger.info(
+                "jev_decision_completed",
+                extra={
+                    "model": result.model,
+                    "provider_request_id": result.provider_request_id,
+                    "question_count": len(request.questions),
+                    "question_types": [q.type for q in request.questions.values()],
+                    "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+                    "input_tokens": result.input_tokens,
+                },
+            )
             return result
-        logger.warning("jev_decision_failed", extra={"error_code":error.code,"duration_ms":round((time.perf_counter()-started)*1000,3),"question_count":len(request.questions)})
+        logger.warning(
+            "jev_decision_failed",
+            extra={
+                "error_code": error.code,
+                "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+                "question_count": len(request.questions),
+            },
+        )
         raise error from None

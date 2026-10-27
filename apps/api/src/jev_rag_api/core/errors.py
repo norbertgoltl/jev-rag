@@ -20,7 +20,8 @@ ERRORS = {
 
 
 def error_response(
-    status: int, details: list[ValidationDetail] | None = None,
+    status: int,
+    details: list[ValidationDetail] | None = None,
     headers: dict[str, str] | None = None,
 ) -> JSONResponse:
     code, message = ERRORS.get(status, ("HTTP_ERROR", "Request failed"))
