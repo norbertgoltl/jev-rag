@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: 0.13.5
+          python-version: 3.14.8
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+      - run: uv sync --project apps/api --locked
+      - run: uv lock --project apps/api --check
+      - run: uv run --project apps/api --locked ruff check .
+        working-directory: apps/api
+      - run: uv run --project apps/api --locked ruff format --check .
+        working-directory: apps/api
+      - run: uv run --project apps/api --locked mypy src/jev_rag_api tests
+        working-directory: apps/api
+      - run: uv run --project apps/api --locked pytest tests -m 'not live'
+        working-directory: apps/api
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.22.1
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - uses: pnpm/action-setup@7088e561eb65bb68695d245aa206f005ef30921d # v4.1.0
+        with:
+          run_install: false
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm --filter @jev-rag/web lint --max-warnings 0
+      - run: corepack pnpm --filter @jev-rag/web typecheck
+      - run: corepack pnpm --filter @jev-rag/web test:coverage
+      - run: corepack pnpm --filter @jev-rag/web build
+
+  infrastructure:
+    name: infrastructure
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      JEV_RAG_DOCKER_CONTEXT: default
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: 0.13.5
+          python-version: 3.14.8
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+      - run: uv sync --project apps/api --locked
+      - run: cp .env.example .env
+      - run: make infra-test

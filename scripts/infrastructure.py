@@ -1,23 +1,31 @@
 """Local Docker Desktop lifecycle and isolated infrastructure acceptance tests."""
+
 import json
 import os
-from pathlib import Path
 import socket
 import subprocess
 import sys
 import uuid
+from pathlib import Path
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from dotenv import dotenv_values
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCKER = ["docker", "--context", "desktop-linux"]
+DOCKER_CONTEXT = os.environ.get("JEV_RAG_DOCKER_CONTEXT", "desktop-linux")
+DOCKER = ["docker", "--context", DOCKER_CONTEXT]
 
 
 def run(*args, capture=False, env=None):
-    return subprocess.run(args, cwd=ROOT, env=env, check=True, text=True,
-                          stdout=subprocess.PIPE if capture else None).stdout
+    return subprocess.run(
+        args,
+        cwd=ROOT,
+        env=env,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE if capture else None,
+    ).stdout
 
 
 def environment():
@@ -35,21 +43,37 @@ def compose(*args, env=None, project=None, capture=False):
 
 def request(url, timeout=1.0, method="GET", body=None):
     data = None if body is None else json.dumps(body).encode()
-    with urlopen(Request(url, data=data, method=method, headers={"Content-Type": "application/json"}), timeout=timeout) as response:
+    with urlopen(
+        Request(
+            url, data=data, method=method, headers={"Content-Type": "application/json"}
+        ),
+        timeout=timeout,
+    ) as response:
         if response.status != 200:
             raise RuntimeError("HTTP readiness failed")
         return response.read()
 
 
 def preflight(env):
-    run(*DOCKER, "context", "inspect", "desktop-linux", capture=True)
+    run(*DOCKER, "context", "inspect", DOCKER_CONTEXT, capture=True)
     info = json.loads(run(*DOCKER, "info", "--format", "{{json .}}", capture=True))
-    if info["OSType"] != "linux" or info["Architecture"] not in {"aarch64", "arm64"}:
-        raise RuntimeError("Docker Desktop Linux ARM64 Engine required")
+    if info["OSType"] != "linux" or info["Architecture"] not in {
+        "aarch64",
+        "arm64",
+        "x86_64",
+        "amd64",
+    }:
+        raise RuntimeError("A native Linux ARM64 or x64 Docker Engine is required")
     if info["NCPU"] < 2 or info["MemTotal"] < 4 * 1024**3:
         raise RuntimeError("Docker Desktop requires at least 2 CPUs and 4 GiB RAM")
     run(*DOCKER, "compose", "version", capture=True)
-    config = json.loads(compose("config", "--format", "json", env=env, capture=True))
+    compose_config = json.loads(
+        compose("config", "--format", "json", env=env, capture=True)
+    )
+    if "platform" in compose_config["services"]["qdrant"]:
+        raise RuntimeError(
+            "Qdrant Compose service must use the native image architecture"
+        )
     port = int(env.get("QDRANT_HOST_PORT", "6333"))
     own = compose("ps", "-q", "qdrant", env=env, capture=True).strip()
     probe = socket.socket()
@@ -60,13 +84,19 @@ def preflight(env):
             raise RuntimeError(f"Port {port} is occupied by another process") from None
         inspected = json.loads(run(*DOCKER, "inspect", own, capture=True))[0]
         bindings = inspected["NetworkSettings"]["Ports"].get("6333/tcp") or []
-        if not any(b["HostIp"] == "127.0.0.1" and b["HostPort"] == str(port) for b in bindings):
-            raise RuntimeError("Occupied port does not belong to this Qdrant service") from None
+        if not any(
+            b["HostIp"] == "127.0.0.1" and b["HostPort"] == str(port) for b in bindings
+        ):
+            raise RuntimeError(
+                "Occupied port does not belong to this Qdrant service"
+            ) from None
     finally:
         probe.close()
-    if config["services"]["qdrant"]["platform"] != "linux/arm64":
-        raise RuntimeError("Unexpected Compose platform")
-    print("PASS: Docker Desktop Linux ARM64, Compose, resources and host port")
+    expected = (
+        "linux/arm64" if info["Architecture"] in {"aarch64", "arm64"} else "linux/amd64"
+    )
+    print(f"PASS: Linux {expected}, Compose, resources and host port")
+    return expected
 
 
 def acceptance(env):
@@ -74,9 +104,13 @@ def acceptance(env):
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
-    test_env = {**env, "QDRANT_HOST_PORT": str(port), "COMPOSE_PROJECT_NAME": project,
-                "QDRANT_URL": f"http://127.0.0.1:{port}"}
-    preflight(test_env)
+    test_env = {
+        **env,
+        "QDRANT_HOST_PORT": str(port),
+        "COMPOSE_PROJECT_NAME": project,
+        "QDRANT_URL": f"http://127.0.0.1:{port}",
+    }
+    expected_architecture = preflight(test_env)
     url = test_env["QDRANT_URL"]
     before = run("docker", "context", "show", capture=True)
     volume = project + "_qdrant_data"
@@ -84,19 +118,62 @@ def acceptance(env):
     success = False
     try:
         for _ in range(2):
-            compose("up", "-d", "--wait", "--wait-timeout", "90", env=test_env, project=project)
-        container = compose("ps", "-q", "qdrant", env=test_env, project=project, capture=True).strip()
+            compose(
+                "up",
+                "-d",
+                "--wait",
+                "--wait-timeout",
+                "90",
+                env=test_env,
+                project=project,
+            )
+        container = compose(
+            "ps", "-q", "qdrant", env=test_env, project=project, capture=True
+        ).strip()
         inspected = json.loads(run(*DOCKER, "inspect", container, capture=True))[0]
-        published = {key: value for key, value in inspected["NetworkSettings"]["Ports"].items() if value}
-        assert published == {"6333/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(port)}]}
-        assert any(m.get("Name") == volume and m["Destination"] == "/qdrant/storage" for m in inspected["Mounts"])
-        assert run(*DOCKER, "image", "inspect", inspected["Image"], "--format", "{{.Os}}/{{.Architecture}}", capture=True).strip() == "linux/arm64"
+        published = {
+            key: value
+            for key, value in inspected["NetworkSettings"]["Ports"].items()
+            if value
+        }
+        assert published == {
+            "6333/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(port)}]
+        }
+        assert any(
+            m.get("Name") == volume and m["Destination"] == "/qdrant/storage"
+            for m in inspected["Mounts"]
+        )
+        assert (
+            run(
+                *DOCKER,
+                "image",
+                "inspect",
+                inspected["Image"],
+                "--format",
+                "{{.Os}}/{{.Architecture}}",
+                capture=True,
+            ).strip()
+            == expected_architecture
+        )
         request(url + "/readyz")
-        request(url + "/collections/persistence_test", method="PUT", body={"vectors": {"size": 2, "distance": "Cosine"}})
-        request(url + "/collections/persistence_test/points?wait=true", method="PUT", body={"points": [{"id": 1, "vector": [1.0, 0.0], "payload": {"marker": project}}]})
+        request(
+            url + "/collections/persistence_test",
+            method="PUT",
+            body={"vectors": {"size": 2, "distance": "Cosine"}},
+        )
+        request(
+            url + "/collections/persistence_test/points?wait=true",
+            method="PUT",
+            body={
+                "points": [
+                    {"id": 1, "vector": [1.0, 0.0], "payload": {"marker": project}}
+                ]
+            },
+        )
         from fastapi.testclient import TestClient
         from jev_rag_api.core.config import Settings
         from jev_rag_api.main import create_app
+
         with TestClient(create_app(Settings(_env_file=None, qdrant_url=url))) as api:
             assert api.get("/health/ready").status_code == 200
             compose("down", env=test_env, project=project)
@@ -108,22 +185,39 @@ def acceptance(env):
                 raise AssertionError("Stopped Qdrant unexpectedly ready")
             except URLError:
                 pass
-            compose("up", "-d", "--wait", "--wait-timeout", "90", env=test_env, project=project)
+            compose(
+                "up",
+                "-d",
+                "--wait",
+                "--wait-timeout",
+                "90",
+                env=test_env,
+                project=project,
+            )
             assert api.get("/health/ready").status_code == 200
             point = json.loads(request(url + "/collections/persistence_test/points/1"))
             assert point["result"]["payload"] == {"marker": project}
         assert run("docker", "context", "show", capture=True) == before
         success = True
-        print("PASS: startup, ARM64, loopback ports, persistence, readiness recovery, idempotency and context safety")
+        print(
+            f"PASS: startup, {expected_architecture}, loopback ports, persistence, readiness recovery, idempotency and context safety"
+        )
     finally:
         if success:
             compose("down", env=test_env, project=project)
-            labels = json.loads(run(*DOCKER, "volume", "inspect", volume, capture=True))[0]["Labels"]
-            if labels.get("com.docker.compose.project") != project or not project.startswith("jev-rag-test-"):
+            labels = json.loads(
+                run(*DOCKER, "volume", "inspect", volume, capture=True)
+            )[0]["Labels"]
+            if labels.get(
+                "com.docker.compose.project"
+            ) != project or not project.startswith("jev-rag-test-"):
                 raise RuntimeError("Refusing to remove an unverified test volume")
             run(*DOCKER, "volume", "rm", volume)
         else:
-            print(f"Test resources preserved for diagnosis: {project}; see infrastructure runbook", file=sys.stderr)
+            print(
+                f"Test resources preserved for diagnosis: {project}; see infrastructure runbook",
+                file=sys.stderr,
+            )
 
 
 def main():
@@ -134,7 +228,10 @@ def main():
     elif action == "infra-test":
         acceptance(env)
     elif action == "health":
-        request(env.get("QDRANT_URL", "http://127.0.0.1:6333").rstrip("/") + "/readyz", float(env.get("QDRANT_TIMEOUT_SECONDS", "1.0")))
+        request(
+            env.get("QDRANT_URL", "http://127.0.0.1:6333").rstrip("/") + "/readyz",
+            float(env.get("QDRANT_TIMEOUT_SECONDS", "1.0")),
+        )
         print("PASS: Qdrant HTTP readiness")
     else:
         if action == "up":
