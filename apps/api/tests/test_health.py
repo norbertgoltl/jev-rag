@@ -16,10 +16,13 @@ class FakeProbe:
         return self.up
 
 
-@pytest.mark.parametrize("up, status, body", [
-    (True, 200, {"status": "ready", "dependencies": {"qdrant": "up"}}),
-    (False, 503, {"status": "not_ready", "dependencies": {"qdrant": "down"}}),
-])
+@pytest.mark.parametrize(
+    "up, status, body",
+    [
+        (True, 200, {"status": "ready", "dependencies": {"qdrant": "up"}}),
+        (False, 503, {"status": "not_ready", "dependencies": {"qdrant": "down"}}),
+    ],
+)
 def test_readiness(settings, up, status, body):
     probe = FakeProbe(up)
     with TestClient(create_app(settings, probe)) as client:

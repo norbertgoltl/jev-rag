@@ -13,7 +13,12 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8,<10"]
+dev = [
+    "mypy>=2.4.0",
+    "pytest>=8,<10",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.3",
+]
 
 [build-system]
 requires = ["uv_build>=0.13,<0.14"]
@@ -24,3 +29,37 @@ jev-rag-api = "jev_rag_api.server:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = [
+  "--strict-config",
+  "--strict-markers",
+  "--cov=jev_rag_api",
+  "--cov-branch",
+  "--cov-report=term-missing",
+  "--cov-report=xml:coverage.xml",
+  "--cov-fail-under=80",
+]
+markers = [
+  "unit: isolated unit tests",
+  "integration: offline integration tests with mocked transports",
+  "live: explicit external provider tests, excluded from normal test runs",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unused_ignores = true
+files = ["src/jev_rag_api", "tests"]

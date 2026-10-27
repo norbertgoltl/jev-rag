@@ -6,15 +6,23 @@ from pydantic import ValidationError
 from jev_rag_api.core.config import ROOT_ENV_FILE, Settings
 
 
-@pytest.mark.parametrize("values", [
-    {"api_port": 0}, {"api_port": 65536}, {"api_port": "invalid"},
-    {"qdrant_url": "not-a-url"}, {"qdrant_url": "ftp://localhost"},
-    {"qdrant_timeout_seconds": -1}, {"qdrant_timeout_seconds": float("inf")},
-    {"app_env": "invalid"}, {"log_level": "invalid"},
-    {"app_env": "production", "app_debug": True},
-    {"cors_allowed_origins": ["*"]},
-    {"cors_allowed_origins": ["https://example.com/path"]},
-])
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"api_port": 0},
+        {"api_port": 65536},
+        {"api_port": "invalid"},
+        {"qdrant_url": "not-a-url"},
+        {"qdrant_url": "ftp://localhost"},
+        {"qdrant_timeout_seconds": -1},
+        {"qdrant_timeout_seconds": float("inf")},
+        {"app_env": "invalid"},
+        {"log_level": "invalid"},
+        {"app_env": "production", "app_debug": True},
+        {"cors_allowed_origins": ["*"]},
+        {"cors_allowed_origins": ["https://example.com/path"]},
+    ],
+)
 def test_invalid_settings(values):
     with pytest.raises(ValidationError):
         Settings(_env_file=None, **values)

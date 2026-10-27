@@ -22,4 +22,8 @@ def test_jev_live_smoke(pytestconfig):
             result = await adapter.evaluate(request())
             assert result.model == settings.typesafe_model
             result.validate_for(request())
+
     asyncio.run(scenario())
+
+
+pytestmark = pytest.mark.live

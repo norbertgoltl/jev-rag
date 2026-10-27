@@ -30,7 +30,9 @@ class NoulQuestionSpec(Model):
     criteria: dict[Literal["true", "false"], str | None] | None = None
 
 
-QuestionSpec = Annotated[ChoiceQuestionSpec | ScoreQuestionSpec | NoulQuestionSpec, Field(discriminator="type")]
+QuestionSpec = Annotated[
+    ChoiceQuestionSpec | ScoreQuestionSpec | NoulQuestionSpec, Field(discriminator="type")
+]
 
 
 class DecisionRequest(Model):
@@ -40,6 +42,7 @@ class DecisionRequest(Model):
     @model_validator(mode="after")
     def validate_json_state(self) -> Self:
         import json
+
         json.dumps(self.state, allow_nan=False)
         return self
 
@@ -81,9 +84,17 @@ class DecisionResult(Model):
             if answer.type != question.type:
                 raise DecisionInvalidResponseError()
             if isinstance(question, ChoiceQuestionSpec):
-                if not isinstance(answer, ChoiceAnswer) or answer.choice not in question.criteria or set(answer.probabilities) != set(question.criteria):
+                if (
+                    not isinstance(answer, ChoiceAnswer)
+                    or answer.choice not in question.criteria
+                    or set(answer.probabilities) != set(question.criteria)
+                ):
                     raise DecisionInvalidResponseError()
             elif isinstance(question, ScoreQuestionSpec):
-                if not isinstance(answer, ScoreAnswer) or answer.score > len(question.criteria) - 1 or set(answer.probabilities) != set(range(len(question.criteria))):
+                if (
+                    not isinstance(answer, ScoreAnswer)
+                    or answer.score > len(question.criteria) - 1
+                    or set(answer.probabilities) != set(range(len(question.criteria)))
+                ):
                     raise DecisionInvalidResponseError()
         return self

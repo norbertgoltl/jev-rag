@@ -25,4 +25,9 @@ def settings():
 
 
 def pytest_addoption(parser):
-    parser.addoption("--jev-live", action="store_true", default=False, help="Enable explicitly authorized TypeSafe live smoke")
+    parser.addoption(
+        "--jev-live",
+        action="store_true",
+        default=False,
+        help="Enable explicitly authorized TypeSafe live smoke",
+    )

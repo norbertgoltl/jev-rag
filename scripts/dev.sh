@@ -17,7 +17,8 @@ Available now:
   dev-api     Start the host FastAPI development server
   dev-web     Start the host Next.js development server
   test-api    Run offline backend tests
-  test        Run offline backend and frontend tests
+  test        Run offline backend and frontend tests with coverage
+  check       Run lint, format check, types, tests and frontend build
   jev-smoke   Run explicitly authorized paid TypeSafe smoke test
 
   health      Check Qdrant HTTP readiness
@@ -27,14 +28,13 @@ Available now:
   status      Show project container health
   logs        Follow Qdrant logs (Ctrl-C stops following)
 
-Requires later Foundation tasks:
+Quality commands:
   setup       Install locked API and web dependencies (FND-008, FND-012)
-  lint        Check backend and frontend lint (FND-021, FND-022)
-  format      Format backend and frontend sources (FND-021, FND-022)
-  typecheck   Check Python and TypeScript types (FND-021, FND-022)
-  check       Run all checks, including format-check and web build (FND-021, FND-022)
+  lint-backend, format-check-backend, typecheck-backend, test-backend
+  lint-frontend, typecheck-frontend, test-frontend, build-web
+  format      Explicitly format backend sources
 
-Unavailable subsystems fail explicitly. No command sources .env as shell code.
+No command sources .env as shell code.
 HELP
         ;;
     setup)
@@ -71,7 +71,7 @@ HELP
         if [ "$1" = setup-api ]; then
             exec uv sync --project "$REPO_ROOT/apps/api" --managed-python --locked
         fi
-        exec uv run --project "$REPO_ROOT/apps/api" --managed-python --locked pytest "$REPO_ROOT/apps/api/tests"
+        exec uv run --project "$REPO_ROOT/apps/api" --managed-python --locked pytest "$REPO_ROOT/apps/api/tests" -m 'not live'
         ;;
     dev-web)
         require_command pnpm 'Activate the pinned pnpm version with Corepack.'
@@ -86,15 +86,55 @@ HELP
         cd "$REPO_ROOT"
         exec uv run --project apps/api --managed-python --locked pytest "$REPO_ROOT/apps/api/tests/live/test_jev_smoke.py" --jev-live
         ;;
-    test)
-        require_command uv 'Install uv first.'
-        require_command pnpm 'Activate the pinned pnpm version first.'
+    lint|lint-backend|lint-frontend|format|format-check|format-check-backend|typecheck|typecheck-backend|typecheck-frontend|test|test-backend|test-frontend|build-web|check)
+        case "$1" in
+            lint-backend|format-check-backend|format|typecheck-backend|test-backend)
+                require_command uv 'Install uv first.'
+                ;;
+            lint-frontend|typecheck-frontend|test-frontend|build-web)
+                require_command pnpm 'Activate the pinned pnpm version first.'
+                ;;
+            *)
+                require_command uv 'Install uv first.'
+                require_command pnpm 'Activate the pinned pnpm version first.'
+                ;;
+        esac
         cd "$REPO_ROOT"
-        uv run --project apps/api --managed-python --locked pytest "$REPO_ROOT/apps/api/tests"
-        exec pnpm --filter @jev-rag/web test
-        ;;
-    lint|format|typecheck|check)
-        fail 'Application quality commands are not implemented. Complete FND-021–022 first. Use make smoke for developer CLI checks.'
+        case "$1" in
+            lint-backend|format-check-backend|format|typecheck-backend|test-backend)
+                require_file apps/api/pyproject.toml FND-008
+                require_file apps/api/uv.lock FND-008
+                ;;
+            lint-frontend|typecheck-frontend|test-frontend|build-web)
+                require_file apps/web/package.json FND-012
+                require_file pnpm-lock.yaml FND-012
+                ;;
+        esac
+        case "$1" in
+            lint-backend) exec uv run --project apps/api --managed-python --locked ruff check . ;;
+            format-check-backend) exec uv run --project apps/api --managed-python --locked ruff format --check . ;;
+            format) exec uv run --project apps/api --managed-python --locked ruff format . ;;
+            typecheck-backend) exec uv run --project apps/api --managed-python --locked mypy apps/api/src/jev_rag_api apps/api/tests ;;
+            test-backend) exec uv run --project apps/api --managed-python --locked pytest apps/api/tests -m 'not live' ;;
+            lint-frontend) exec pnpm --filter @jev-rag/web lint --max-warnings 0 ;;
+            typecheck-frontend) exec pnpm --filter @jev-rag/web typecheck ;;
+            test-frontend) exec pnpm --filter @jev-rag/web test:coverage ;;
+            build-web) exec pnpm --filter @jev-rag/web build ;;
+            lint) "$0" lint-backend; exec "$0" lint-frontend ;;
+            format-check) exec "$0" format-check-backend ;;
+            typecheck) "$0" typecheck-backend; exec "$0" typecheck-frontend ;;
+            test) "$0" test-backend; exec "$0" test-frontend ;;
+            check)
+                "$0" lint-backend
+                "$0" lint-frontend
+                "$0" format-check-backend
+                "$0" typecheck-backend
+                "$0" typecheck-frontend
+                "$0" test-backend
+                "$0" test-frontend
+                exec "$0" build-web
+                ;;
+        esac
         ;;
     *)
         fail "Unknown command: $1. Run make help."

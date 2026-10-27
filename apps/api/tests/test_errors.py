@@ -35,18 +35,27 @@ def error_app(settings):
     return app
 
 
-@pytest.mark.parametrize("method, path, status, code", [
-    ("GET", "/missing", 404, "NOT_FOUND"),
-    ("POST", "/health/live", 405, "METHOD_NOT_ALLOWED"),
-    ("POST", "/validation", 422, "VALIDATION_ERROR"),
-    ("GET", "/failure", 500, "INTERNAL_ERROR"),
-    ("GET", "/dependency-failure", 503, "SERVICE_UNAVAILABLE"),
-])
+@pytest.mark.parametrize(
+    "method, path, status, code",
+    [
+        ("GET", "/missing", 404, "NOT_FOUND"),
+        ("POST", "/health/live", 405, "METHOD_NOT_ALLOWED"),
+        ("POST", "/validation", 422, "VALIDATION_ERROR"),
+        ("GET", "/failure", 500, "INTERNAL_ERROR"),
+        ("GET", "/dependency-failure", 503, "SERVICE_UNAVAILABLE"),
+    ],
+)
 def test_error_contract(settings, method, path, status, code):
     with TestClient(error_app(settings)) as client:
-        response = client.request(method, path, json={"count": "secret-body"}, headers={
-            "X-Request-ID": "test-request", "Origin": "http://127.0.0.1:3000",
-        })
+        response = client.request(
+            method,
+            path,
+            json={"count": "secret-body"},
+            headers={
+                "X-Request-ID": "test-request",
+                "Origin": "http://127.0.0.1:3000",
+            },
+        )
     body = response.json()
     assert response.status_code == status
     assert body["error"]["code"] == code
@@ -83,15 +92,25 @@ def test_parallel_requests_and_logging(settings):
         return {"request_id": request_id_context.get()}
 
     async def exercise():
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url="http://test") as client:
-            responses = await asyncio.gather(*[
-                client.get("/parallel?token=secret-query", headers={"X-Request-ID": f"request-{index}"})
-                for index in range(8)
-            ])
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app), base_url="http://test"
+        ) as client:
+            responses = await asyncio.gather(
+                *[
+                    client.get(
+                        "/parallel?token=secret-query", headers={"X-Request-ID": f"request-{index}"}
+                    )
+                    for index in range(8)
+                ]
+            )
             await client.get("/failure")
         assert request_id_context.get() is None
         for index, response in enumerate(responses):
-            assert response.json()["request_id"] == response.headers["X-Request-ID"] == f"request-{index}"
+            assert (
+                response.json()["request_id"]
+                == response.headers["X-Request-ID"]
+                == f"request-{index}"
+            )
 
     try:
         asyncio.run(exercise())
@@ -101,6 +120,16 @@ def test_parallel_requests_and_logging(settings):
     assert "secret" not in "".join(records)
     decoded = [json.loads(line) for line in records]
     for record in decoded:
-        assert {"timestamp", "level", "service", "event", "request_id", "method", "path", "status_code", "duration_ms"} <= record.keys()
+        assert {
+            "timestamp",
+            "level",
+            "service",
+            "event",
+            "request_id",
+            "method",
+            "path",
+            "status_code",
+            "duration_ms",
+        } <= record.keys()
     assert decoded[-1]["exception_type"] == "RuntimeError"
     assert decoded[-1]["status_code"] == 500
