@@ -71,3 +71,17 @@ jobs:
       - run: uv sync --project apps/api --locked
       - run: cp .env.example .env
       - run: make infra-test
+
+  security:
+    name: security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      JEV_RAG_DOCKER_CONTEXT: default
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - run: make security-setup
+      - run: make security-check
+      - run: make security-smoke
