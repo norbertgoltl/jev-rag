@@ -30,6 +30,7 @@ Hivatalos háttér: [Node.js kiadások](https://nodejs.org/en/about/previous-rel
 | `package.json` | Privát workspace-koordinátor, runtime- és package manager pin, alkalmazásfüggőség nélkül |
 | `pnpm-workspace.yaml` | Kizárólag `apps/web`, közös root lockfile-lal |
 | `infra/compose.yaml` | Docker-infrastruktúra, FND-015–017-től |
+| `docs/foundation/` | Foundation acceptance checklist és tényleges release-validáció |
 | `scripts/` | Fejlesztői CLI és offline smoke tesztek |
 | `docs/architecture/`, `docs/adr/`, `docs/foundation/` | Architektúra, döntések, fázishatárok |
 | `docs/development/` | Setup és fejlesztési workflow |
@@ -70,7 +71,7 @@ Más könyvtárból `make -C /absolute/path/to/jev-rag help` használható. A sh
 | `make lint`, `make format`, `make typecheck` | Backend és frontend quality gate-ek, lásd a [tesztelési útmutatót](testing.md). |
 | `make check` | Lint, format-check, typecheck, offline teszt coverage-dzsel és frontend production build. |
 
-Minden hiányzó alrendszerhez érthető, nem nulla kilépési kód tartozik. A setup az első telepítési hiba után leáll, nem futtatja a következő csomagkezelőt. A két csomagkezelő telepítése nem közös tranzakció, a sikeres első lépést a második hibája nem vonja vissza. Ismételt setup ugyanazokat a rögzített függőségeket szinkronizálja. A GitHub Actions három külön jobban futtatja az alkalmazás- és infrastruktúra-ellenőrzést, lásd a [CI-útmutatót](ci.md).
+Minden hiányzó alrendszerhez érthető, nem nulla kilépési kód tartozik. A setup az első telepítési hiba után leáll, nem futtatja a következő csomagkezelőt. A két csomagkezelő telepítése nem közös tranzakció, a sikeres első lépést a második hibája nem vonja vissza. Ismételt setup ugyanazokat a rögzített függőségeket szinkronizálja. A GitHub Actions négy külön jobban futtatja a backend, frontend, infrastruktúra és security ellenőrzést, lásd a [CI-útmutatót](ci.md).
 
 A későbbi infrastruktúra-implementáció ellenőrzi a Docker daemon elérhetőségét és a portütközést. Normál leállítás soha nem használhat volume-törlést. A FastAPI és Next.js nem kerül Dockerbe.
 
@@ -94,13 +95,13 @@ Commitüzenethez co-author nem adható. A [PR-sablon](../../.github/pull_request
 
 Az EditorConfig UTF-8-at, LF-et, végső újsort, Pythonhoz és shellhez 4, TypeScript/JSON/YAML-hez 2 szóközt, Makefile-hoz tabot ír elő. A Git attributes normalizálja a szövegeket és binárisként kezeli a kijelölt médiatípusokat.
 
-A `.gitignore` kizárja a secret fájlokat, környezeteket, függőségeket, buildet és cache-t. A `.env.example`, `.env.local.example` és hasonló minták kivételek. Ez nem akadályozza meg a titkok explicit hozzáadását, az automatizált secret scanner az FND-024 része.
+A `.gitignore` kizárja a secret fájlokat, környezeteket, függőségeket, buildet és cache-t. A `.env.example`, `.env.local.example` és hasonló minták kivételek. Ez nem akadályozza meg a titkok explicit hozzáadását; a titokellenőrzés részletei a [security baseline](security.md) dokumentumban vannak.
 
 Commit előtt `git status --short`, `git diff --check` és `make smoke` futtatandó, a `doctor` eltéréseit is rögzíteni kell. Új fájloknál a diff mellett a fájlok tartalmát is át kell nézni, mert a `git diff` önmagában nem mutatja az untracked fájlokat. Ellenőrizendő, hogy nincs secret, `.venv`, `node_modules` vagy generált adat a változások között.
 
 ## FND-005–007 ellenőrzési állapot
 
-A struktúra, workspace-metaadatok, Git/editor szabályok, PR-sablon, CLI és smoke tesztek elkészültek. A `make help` és a `make smoke` sikeres. A Python-környezet javítása után a valódi `make doctor` is sikeresen lefutott, 0 kilépési kóddal. Az uv-managed Python `3.14.8`, Node.js `24.22.1`, pnpm `12.15.0`, Git, Make, uv, Corepack és Docker Compose ellenőrzése megfelelő. A diagnosztika nem telepített vagy módosított eszközt, alkalmazás- és infrastruktúra-készenlétet nem vizsgál.
+A struktúra, workspace-metaadatok, Git/editor szabályok, PR-sablon, CLI és smoke tesztek elkészültek. A `make help` és a `make smoke` sikeres. A Python-környezet javítása után a valódi `make doctor` is sikeresen lefutott, 0 kilépési kóddal. Az uv-managed Python `3.14.8`, Node.js `24.22.1`, pnpm `12.15.0`, Git, Make, uv, Corepack és Docker Compose ellenőrzése megfelelő. A diagnosztika nem telepített vagy módosított eszközt, alkalmazás- és infrastruktúra-készenlétet nem vizsgál. Az aktuális release-validáció státuszait a [Foundation release report](../foundation/release-report.md) rögzíti.
 
 Az alkalmazás quality gate parancsai: `make lint`, `make format-check`, `make typecheck`, `make test` és `make check`. Részletek: [tesztelés](testing.md), [CI](ci.md).
 
@@ -111,7 +112,7 @@ Elkészült a backend, a típusos konfiguráció, a hibakezelés és a JSON logg
 
 ### FND-012–014 ellenőrzés
 
-A frontend hivatalos generátorból készült. A pnpm 12.15.0 szerinti frozen telepítés, ESLint, Next route typegen és TypeScript, 18 mockolt teszt, backend nélküli production build, CLI smoke és production HTTP smoke sikeres. A Node 24.22.1 ARM64 kezdetben külön cache runtime-ból futott, majd a host Node-verziója is frissült. A pnpm 12.15.0 verzióra átállás után a host `make doctor` sikeres. A `pnpm install --frozen-lockfile`, frontend lint, typecheck, production build és CLI smoke ellenőrzések sikeresek. A lockfile SHA-256 ellenőrzőösszege változatlan, újragenerálás nem történt. A valódi Qdrant-ready integráció későbbi feladat. Részletek: [frontend](../../apps/web/README.md).
+A frontend hivatalos generátorból készült. A pnpm 12.15.0 szerinti frozen telepítés, ESLint, Next route typegen és TypeScript, 18 mockolt teszt, backend nélküli production build, CLI smoke és production HTTP smoke sikeres. A Node.js 24.22.1 és pnpm 12.15.0 host verzióra rögzítése után a `make doctor` sikeres volt. A lockfile SHA-256 ellenőrzőösszege változatlan, újragenerálás nem történt. A Qdrant-ready integrációt az FND-015–017, a teljes clean-clone diagnosztikai útvonalat az aktuális [release report](../foundation/release-report.md) rögzíti. Részletek: [frontend](../../apps/web/README.md).
 
 Az FND-015–017 infrastruktúra és valódi Qdrant readiness elkészült. Aktuális parancsok és validáció: [infrastruktúra](infrastructure.md).
 
