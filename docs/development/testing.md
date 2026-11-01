@@ -1,6 +1,6 @@
 # Testing and quality checks
 
-Run `make check` from the repository root before opening a pull request. It runs backend and frontend lint, formatting verification, type checks, offline tests with coverage, and the frontend production build. It does not start Docker or call the live Jev API.
+Run `make check` from the repository root before opening a pull request. It runs backend and frontend lint, formatting verification, type checks, offline tests with coverage, and the frontend production build. It does not start Docker or call the live Jev API. The Foundation handoff also requires `make security-setup`, `make security-check`, `make security-smoke`, and `make infra-test`.
 
 ## Backend
 
@@ -11,4 +11,12 @@ Unit tests and offline integration tests use local fixtures and mocked transport
 ## Frontend
 
 The frontend is part of the root pnpm workspace. Use `corepack pnpm install --frozen-lockfile` to install dependencies. The targets `make lint-frontend`, `make typecheck-frontend`, `make test-frontend`, and `make build-web` run ESLint, Next.js type generation plus TypeScript, Vitest V8 coverage, and the production build. React tests use jsdom; server API tests opt into Node. Coverage floors are 80% lines, statements, and functions, and 70% branches.
+
+## Security
+
+`make security-setup` installs the checksum-pinned Gitleaks 8.30.1 binary under ignored `.tools/`. `make security-check` scans history and first-party working-tree paths and validates frontend and Qdrant boundaries. `make security-smoke` creates a temporary isolated repository and verifies that synthetic tracked secrets, frontend credential references, scanner findings, and wildcard Qdrant bindings fail. It removes the fixture when complete.
+
+## Foundation release gate
+
+Use [`../foundation/release-checklist.md`](../foundation/release-checklist.md) and record only commands that were actually run in [`../foundation/release-report.md`](../foundation/release-report.md). A clean setup must use a separate clone. Never use volume deletion to make an infrastructure test pass.
 
