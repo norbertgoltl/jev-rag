@@ -1,0 +1,10 @@
+title = "Jev RAG secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Exclude generated and dependency directories from working-tree scans."
+paths = [
+  '''(^|/)(\.git|\.venv|\.next|coverage|node_modules|\.tools)/''',
+]

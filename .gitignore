@@ -52,6 +52,7 @@ build/
 
 # uv local cache (if configured)
 .uv-cache/
+.tools/
 
 # Python testing
 .pytest_cache/

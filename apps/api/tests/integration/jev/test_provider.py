@@ -85,9 +85,10 @@ def test_factory_and_fastapi_dependency_override():
     assert app.state.decision_port is None
 
 
-def test_secret_not_in_settings_representation():
+def test_secret_not_in_settings_representation_or_json():
     settings = Settings(_env_file=None, jev_mode="live", typesafe_api_key="super-secret")
     assert "super-secret" not in repr(settings)
+    assert "super-secret" not in settings.model_dump_json()
 
 
 def test_client_closed_when_lifespan_body_fails(monkeypatch):
