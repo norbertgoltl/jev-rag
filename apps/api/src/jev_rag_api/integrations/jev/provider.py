@@ -1,18 +1,11 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import Request
-
 from jev_rag_api.application.ports.decision import DecisionPort
 from jev_rag_api.core.config import Settings
 from jev_rag_api.domain.decisions.errors import DecisionConfigurationError
 
 from .mock import DisabledDecisionAdapter, MockDecisionAdapter
-
-
-def get_decision_port(request: Request) -> DecisionPort:
-    port: DecisionPort = request.app.state.decision_port
-    return port
 
 
 @asynccontextmanager

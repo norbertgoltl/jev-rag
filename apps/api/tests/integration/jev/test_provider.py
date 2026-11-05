@@ -7,9 +7,10 @@ from fastapi import Depends
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from jev_rag_api.api.dependencies import get_decision_port
 from jev_rag_api.application.ports.decision import DecisionPort
 from jev_rag_api.integrations.jev.mock import DisabledDecisionAdapter, MockDecisionAdapter
-from jev_rag_api.integrations.jev.provider import decision_provider, get_decision_port
+from jev_rag_api.integrations.jev.provider import decision_provider
 from jev_rag_api.main import create_app
 from settings_factory import build_settings
 
@@ -59,9 +60,9 @@ def test_live_client_shared_and_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(sdk, "AsyncTypeSafeClient", constructor)
     app = create_app(build_settings(_env_file=None, jev_mode="live", typesafe_api_key="test-key"))
     with TestClient(app) as api:
-        assert app.state.decision_port.client is client
+        assert app.state.container.decision_port.client is client
         assert api.get("/health/live").status_code == 200
-        assert app.state.decision_port.client is client
+        assert app.state.container.decision_port.client is client
     constructor.assert_called_once()
     client.aclose.assert_awaited_once()
     kwargs = constructor.call_args.kwargs
@@ -85,7 +86,7 @@ def test_factory_and_fastapi_dependency_override() -> None:
         alternate = DisabledDecisionAdapter()
         app.dependency_overrides[get_decision_port] = lambda: alternate
         assert api.get("/test-decision-provider").json() == {"mock": False}
-    assert app.state.decision_port is None
+    assert app.state.container.decision_port is None
 
 
 def test_secret_not_in_settings_representation_or_json() -> None:

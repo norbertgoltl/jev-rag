@@ -38,7 +38,7 @@ A konténer healthcheck Bash beépített TCP-funkcióval valódi HTTP-kérést k
 
 ## FastAPI readiness
 
-Az app lifespan egy HTTPX AsyncClientet kezel. A QdrantReadinessProbe `check()` metódusa kizárólag HTTP 200-nál igaz, timeout/kapcsolathibánál strukturált warning és hamis. A meglévő `check_health()` port kompatibilis marad. Klienslezárás shutdownkor történik. Nincs SDK, collection-kezelés vagy retrieval.
+Az app lifespan egy HTTPX AsyncClientet kezel. A QdrantReadinessProbe egyetlen publikus metódusa, a port `check_health()` metódusa kizárólag HTTP 200-nál igaz; timeout/kapcsolathibánál és nem 200-as válasznál strukturált warning (`qdrant_unavailable`, `qdrant_not_ready`) és hamis. Klienslezárás shutdownkor történik. Nincs SDK, collection-kezelés vagy retrieval.
 
 Qdrant elérhető: `/health/ready` 200. Kiesés: 503, `/health/live` továbbra is 200. Helyreállás után readiness ismét 200. Belső URL és exception nem kerül a válaszba vagy warning logba.
 

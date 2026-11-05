@@ -6,11 +6,12 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp
 
+from jev_rag_api.api.dependencies import AppContainer
+from jev_rag_api.api.errors import register_error_handlers
 from jev_rag_api.api.router import router
 from jev_rag_api.application.ports.decision import DecisionPort
 from jev_rag_api.application.ports.readiness import ReadinessProbe
 from jev_rag_api.core.config import Settings
-from jev_rag_api.core.errors import register_error_handlers
 from jev_rag_api.core.logging import configure_logging
 from jev_rag_api.core.middleware import RequestContextMiddleware
 from jev_rag_api.integrations.jev.provider import decision_provider
@@ -19,12 +20,13 @@ from jev_rag_api.integrations.qdrant.readiness import QdrantReadinessProbe
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    config = app.state.settings
+    container: AppContainer = app.state.container
+    config = container.settings
     async with AsyncExitStack() as stack:
-        app.state.decision_port = await stack.enter_async_context(
-            decision_provider(config, app.state.decision_override)
+        container.decision_port = await stack.enter_async_context(
+            decision_provider(config, container.decision_override)
         )
-        owns_probe = app.state.readiness_probe is None
+        owns_probe = container.readiness_probe is None
         if owns_probe:
             client = await stack.enter_async_context(
                 httpx.AsyncClient(
@@ -34,13 +36,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     follow_redirects=False,
                 )
             )
-            app.state.readiness_probe = QdrantReadinessProbe(client)
+            container.readiness_probe = QdrantReadinessProbe(client)
         try:
             yield
         finally:
-            app.state.decision_port = None
+            container.decision_port = None
             if owns_probe:
-                app.state.readiness_probe = None
+                container.readiness_probe = None
 
 
 class FoundationAPI(FastAPI):
@@ -49,7 +51,7 @@ class FoundationAPI(FastAPI):
         return RequestContextMiddleware(
             CORSMiddleware(
                 super().build_middleware_stack(),
-                allow_origins=self.state.settings.cors_allowed_origins,
+                allow_origins=self.state.container.settings.cors_allowed_origins,
                 allow_methods=["GET", "OPTIONS"],
                 allow_headers=["Content-Type", "X-Request-ID"],
                 expose_headers=["X-Request-ID"],
@@ -67,10 +69,9 @@ def create_app(
     configure_logging(config.log_level)
     # Never expose Starlette's debug traceback through the public HTTP API.
     application = FoundationAPI(title="Jev RAG Foundation API", version="0.1.0", lifespan=lifespan)
-    application.state.settings = config
-    application.state.readiness_probe = readiness_probe
-    application.state.decision_override = decision_port
-    application.state.decision_port = None
+    application.state.container = AppContainer(
+        settings=config, readiness_probe=readiness_probe, decision_override=decision_port
+    )
     register_error_handlers(application)
     application.include_router(router)
     return application
