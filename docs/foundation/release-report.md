@@ -57,3 +57,7 @@ This release candidate was validated in the current workspace and an isolated lo
 ## Final decision
 
 **BLOCKED.** Local and isolated-clone quality, security, setup, infrastructure, and diagnostics checks passed. PR #23 has all four GitHub Actions jobs passing. Foundation release acceptance still requires the `security` check on the remaining PRs after PR #23 merges, adding it to the `main` required checks, and evidence that failed required checks block merging.
+
+## Erratum: strict mypy gate
+
+The backend type-check gate originally ran `mypy` from the repository root, so `[tool.mypy] strict = true` in `apps/api/pyproject.toml` was not applied and earlier "strict typecheck PASS" results were produced without strict mode. The gate (`make typecheck-backend` and the CI backend job) now passes `--config-file apps/api/pyproject.toml`. Under strict mode the test suite had 157 errors; they are fixed and `mypy` reports no issues in 46 source files.

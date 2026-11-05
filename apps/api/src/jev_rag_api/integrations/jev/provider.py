@@ -11,7 +11,8 @@ from .mock import DisabledDecisionAdapter, MockDecisionAdapter
 
 
 def get_decision_port(request: Request) -> DecisionPort:
-    return request.app.state.decision_port
+    port: DecisionPort = request.app.state.decision_port
+    return port
 
 
 @asynccontextmanager

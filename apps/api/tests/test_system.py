@@ -1,10 +1,13 @@
+from typing import Any
+
 import pytest
 from fastapi.testclient import TestClient
 
+from jev_rag_api.core.config import Settings
 from jev_rag_api.main import create_app
 
 
-def test_docs_and_schema(settings):
+def test_docs_and_schema(settings: Settings) -> None:
     with TestClient(create_app(settings)) as client:
         assert client.get("/docs").status_code == 200
         schema = client.get("/openapi.json").json()
@@ -20,7 +23,7 @@ def test_docs_and_schema(settings):
         ("https://example.com", False),
     ],
 )
-def test_cors_preflight(settings, origin, allowed):
+def test_cors_preflight(settings: Settings, origin: Any, allowed: Any) -> None:
     with TestClient(create_app(settings)) as client:
         response = client.options(
             "/health/live",
@@ -36,7 +39,7 @@ def test_cors_preflight(settings, origin, allowed):
     assert "access-control-allow-credentials" not in response.headers
 
 
-def test_cors_rejects_post(settings):
+def test_cors_rejects_post(settings: Settings) -> None:
     with TestClient(create_app(settings)) as client:
         assert (
             client.options(

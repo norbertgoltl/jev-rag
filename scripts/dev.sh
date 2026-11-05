@@ -114,7 +114,7 @@ HELP
             lint-backend) exec uv run --project apps/api --managed-python --locked ruff check . ;;
             format-check-backend) exec uv run --project apps/api --managed-python --locked ruff format --check . ;;
             format) exec uv run --project apps/api --managed-python --locked ruff format . ;;
-            typecheck-backend) exec uv run --project apps/api --managed-python --locked mypy apps/api/src/jev_rag_api apps/api/tests ;;
+            typecheck-backend) exec uv run --project apps/api --managed-python --locked mypy --config-file apps/api/pyproject.toml apps/api/src/jev_rag_api apps/api/tests ;;
             test-backend) exec uv run --project apps/api --managed-python --locked pytest apps/api/tests -m 'not live' ;;
             lint-frontend) exec pnpm --filter @jev-rag/web lint --max-warnings 0 ;;
             typecheck-frontend) exec pnpm --filter @jev-rag/web typecheck ;;
