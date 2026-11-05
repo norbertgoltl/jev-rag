@@ -75,6 +75,3 @@ def create_app(
     register_error_handlers(application)
     application.include_router(router)
     return application
-
-
-app = create_app()

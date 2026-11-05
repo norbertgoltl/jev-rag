@@ -3,14 +3,6 @@ import pytest
 from jev_rag_api.core.config import Settings
 from settings_factory import build_settings
 
-# Import the Uvicorn entrypoint in isolation before test-module collection.
-# The exported default app must not read a developer's personal dotenv file.
-with pytest.MonkeyPatch.context() as patch:
-    patch.setitem(Settings.model_config, "env_file", None)
-    for field_name in Settings.model_fields:
-        patch.delenv(field_name.upper(), raising=False)
-    import jev_rag_api.main  # noqa: F401
-
 
 @pytest.fixture(autouse=True)
 def isolated_environment(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:

@@ -14,9 +14,9 @@ async def decision_provider(
 ) -> AsyncIterator[DecisionPort]:
     if override is not None:
         yield override
-    elif settings.jev_mode == "mock":
+    elif settings.effective_jev_mode == "mock":
         yield MockDecisionAdapter()
-    elif settings.jev_mode == "disabled":
+    elif settings.effective_jev_mode == "disabled":
         yield DisabledDecisionAdapter()
     else:
         import typesafe_sdk as sdk
