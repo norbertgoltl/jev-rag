@@ -9,7 +9,7 @@ from jev_rag_api.main import create_app
 
 def test_docs_and_schema(settings: Settings) -> None:
     with TestClient(create_app(settings)) as client:
-        assert client.get("/docs").status_code == 200
+        assert client.get("/docs").status_code == 404  # intentional failure: DO NOT MERGE
         schema = client.get("/openapi.json").json()
     assert set(schema["paths"]) == {"/health/live", "/health/ready", "/api/v1/system/status"}
     assert "503" in schema["paths"]["/health/ready"]["get"]["responses"]
