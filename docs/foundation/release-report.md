@@ -72,18 +72,17 @@ The Foundation changed after the first record above (strict mypy gate, Prettier 
 | Clean clone: setup and doctor | NOT RUN | The clean-clone procedure was not repeated: creating the separate clone was blocked in the automated session. Run it manually (see the release checklist). The first record above remains the latest clean-clone evidence, for an earlier commit. |
 | GitHub Actions on pull requests #26–#31 | PASS with one exception | `backend`, `frontend`, `infrastructure` and `security` passed on #26, #27, #29, #30 and #31. On #28 the `frontend` job was still queued (run 42067447169) when the PR was merged and is still queued. |
 | GitHub Actions on `main` | PASS with one exception | The push run for the #31 merge (run [42087895091](https://github.com/norbertgoltl/jev-rag/actions/runs/42087895091)) passed all four jobs, as did the runs for #26, #27, #29 and #30. The run for the #28 merge commit `6924a7d` ended in `startup_failure` with no jobs; the following commits passed. |
-| `main` required checks include all four jobs | BLOCKED | The rulesets and branch-protection APIs return HTTP 403 ("Upgrade to GitHub Pro or make this repository public"). Required checks therefore cannot be configured or verified for this private repository on the current plan. |
-| Failed or missing required check blocks merge | FAIL (not enforced) | PR #28 was merged while its `frontend` check was still queued, which shows that checks are not enforced. |
-| GitHub secret scanning and push protection | NOT VERIFIED | The repository API reports no `security_and_analysis` data on the current plan. |
+| `main` required checks include all four jobs | PASS (updated) | While the repository was private the rulesets API returned HTTP 403. After the repository was made public the active ruleset `Protect main` required only `backend`, `frontend` and `infrastructure`; `security` was added on 2026-11-05. The ruleset now requires all four checks with up-to-date branches, pull requests, no deletion and no force push, and has no bypass actors. |
+| Failed or missing required check blocks merge | PASS (updated) | PR #28 had been merged while its `frontend` check was still queued, before enforcement was available. Test PR #33 contained one intentionally failing test: `backend` failed, the other three checks passed, and GitHub reported `mergeStateStatus: BLOCKED` (`mergeable_state: blocked`) for a non-draft PR. A merge was deliberately not attempted. The PR was closed without merging and its branch deleted. |
+| GitHub secret scanning and push protection | PASS (updated) | After the repository became public the API reports `secret_scanning` and `secret_scanning_push_protection` as `enabled`. |
 
 ### Decision after re-validation
 
-**BLOCKED.** The code is in better shape than at the first record: strict type checking now actually runs, the layers are separated, the contract types are generated and checked, and every local and CI gate passed on the merged state. The release is still blocked for process reasons, not code reasons:
+**BLOCKED.** The code is in better shape than at the first record: strict type checking now actually runs, the layers are separated, the contract types are generated and checked, and every local and CI gate passed on the merged state. Required checks are now enforced and verified, and secret scanning and push protection are enabled. The release is still blocked on remaining evidence:
 
-1. Required status checks cannot be enforced on a private repository on the current GitHub plan, and a merge already happened with an unfinished check. Make the repository public or upgrade the plan, then require `backend`, `frontend`, `infrastructure` and `security` and verify with a failing test PR.
-2. Rerun the clean-clone setup and the integrated scenario in that clone.
-3. Investigate the queued `frontend` run on PR #28 and the `startup_failure` on `main` commit `6924a7d` (rerun the workflow); both look like GitHub-side events but are unexplained.
-4. Confirm secret scanning and push protection in the repository settings when available.
+1. Rerun the clean-clone setup (`make setup`, `make doctor`, security setup) and the integrated scenario in a separate clone, as described in the release checklist. This was NOT RUN because creating the clone was blocked in the automated session.
+2. Investigate the queued `frontend` run on PR #28 and the `startup_failure` on `main` commit `6924a7d` (rerun the workflow); both look like GitHub-side events but are unexplained. Neither reproduced on PRs #29-#33.
+3. The repository was made public for this verification. Decide deliberately whether it stays public; if it returns to private on a plan without rulesets, the enforcement evidence above no longer applies.
 
 ## Erratum: strict mypy gate
 
