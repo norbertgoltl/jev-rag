@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
-from jev_rag_api.core.errors import ServiceUnavailableError
+from jev_rag_api.application.errors import ServiceUnavailableError
 from jev_rag_api.core.logging import JsonFormatter, logger, request_id_context
 from jev_rag_api.main import create_app
 

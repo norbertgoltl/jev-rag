@@ -29,6 +29,10 @@ Minden HTTP-válasz `X-Request-ID` headert kap. A bejövő ID 1–64 ASCII betű
 
 A request context és a CORS a Starlette server-error rétegén kívül található, ezért a preflight és az 500-as válasz is korrelálható. CORS: csak a konfigurált originlista, GET/OPTIONS, Content-Type/X-Request-ID request header, X-Request-ID exposed header, credentials nélkül.
 
+## Rétegek és függőségek
+
+A `domain`, `application`, `core` és `integrations` csomag nem importál FastAPI-t és az `api` csomagot. A `domain` és az `application` emellett nem importál HTTP-klienst (`httpx`) vagy `integrations` kódot. Ezt a `tests/unit/test_architecture.py` ellenőrzi. A HTTP-hibakezelés az `api/errors.py`-ban van. A futási szolgáltatásokat az `app.state.container` típusos `AppContainer` objektum tartja (settings, readiness probe, decision port), a route-ok az `api/dependencies.py` `get_settings`, `get_readiness_probe` és `get_decision_port` FastAPI dependency-jein keresztül érik el. Hiányzó szolgáltatásnál a dependency `ServiceUnavailableError`-t dob, ami `503 SERVICE_UNAVAILABLE` választ ad.
+
 ## Strukturált logging
 
 A standard `logging` JSON formatter UTC ISO-időbélyeget, szintet, service-t, eseményt és request ID-t ír. A HTTP completion esemény ezen felül metódust, query nélküli pathot, státuszt és időtartamot tartalmaz. Váratlan hibánál csak az exception típusa kerül a logba, a szövege és stack trace nélkül.

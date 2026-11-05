@@ -1,8 +1,10 @@
 import asyncio
+import json
 
 import httpx
 import pytest
 
+from jev_rag_api.core.logging import JsonFormatter
 from jev_rag_api.integrations.qdrant.readiness import QdrantReadinessProbe
 
 
@@ -15,7 +17,7 @@ def test_http_readiness(status, expected):
             base_url="http://qdrant/",
             transport=httpx.MockTransport(lambda request: httpx.Response(status)),
         ) as client:
-            assert await QdrantReadinessProbe(client).check() is expected
+            assert await QdrantReadinessProbe(client).check_health() is expected
 
     asyncio.run(scenario())
 
@@ -41,3 +43,20 @@ def test_network_failure_and_recovery(error, caplog):
 
     asyncio.run(scenario())
     assert "private-connection-secret" not in caplog.text
+
+
+def test_failures_are_logged_as_named_events(caplog: pytest.LogCaptureFixture) -> None:
+    async def scenario() -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(503)
+
+        async with httpx.AsyncClient(
+            base_url="http://qdrant/", transport=httpx.MockTransport(handler)
+        ) as client:
+            assert await QdrantReadinessProbe(client).check_health() is False
+
+    with caplog.at_level("WARNING", logger="jev_rag_api"):
+        asyncio.run(scenario())
+    record = next(item for item in caplog.records if item.getMessage() == "qdrant_not_ready")
+    assert json.loads(JsonFormatter().format(record))["event"] == "qdrant_not_ready"
+    assert record.status_code == 503  # type: ignore[attr-defined]

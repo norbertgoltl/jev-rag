@@ -1,9 +1,10 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from jev_rag_api.api.dependencies import get_readiness_probe, get_settings
 from jev_rag_api.api.schemas.health import (
     DownDependencies,
     LivenessResponse,
@@ -11,6 +12,8 @@ from jev_rag_api.api.schemas.health import (
     ReadinessResponse,
     UpDependencies,
 )
+from jev_rag_api.application.ports.readiness import ReadinessProbe
+from jev_rag_api.core.config import Settings
 
 router = APIRouter(prefix="/health", tags=["health"])
 
@@ -23,10 +26,13 @@ async def liveness() -> LivenessResponse:
 @router.get(
     "/ready", response_model=ReadinessResponse, responses={503: {"model": NotReadyResponse}}
 )
-async def readiness(request: Request) -> ReadinessResponse | JSONResponse:
+async def readiness(
+    settings: Settings = Depends(get_settings),
+    probe: ReadinessProbe = Depends(get_readiness_probe),
+) -> ReadinessResponse | JSONResponse:
     try:
-        async with asyncio.timeout(request.app.state.settings.qdrant_timeout_seconds):
-            up = await request.app.state.readiness_probe.check_health()
+        async with asyncio.timeout(settings.qdrant_timeout_seconds):
+            up = await probe.check_health()
     except TimeoutError, OSError:
         logging.getLogger(__name__).warning("Qdrant readiness deadline exceeded")
         up = False
