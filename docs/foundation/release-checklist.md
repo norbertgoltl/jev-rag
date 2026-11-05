@@ -33,7 +33,7 @@ A clean setup must be performed in a separate clone. Do not overwrite an existin
 
 ## Required GitHub checks
 
-The `main` ruleset must require the exact successful checks `backend`, `frontend`, `infrastructure`, and `security`, with up-to-date branches and pull requests. A failed or missing required check must block merging. Record an actual test PR or ruleset evidence before marking this acceptance item `PASS`.
+The `main` ruleset must require the exact successful checks `backend`, `frontend`, `infrastructure`, and `security`, with up-to-date branches and pull requests. A failed or missing required check must block merging. Record an actual test PR or ruleset evidence before marking this acceptance item `PASS`. Rulesets and branch protection are not available for a private repository on a free GitHub plan (the API returns HTTP 403); in that case the item stays `BLOCKED` until the repository is public or the plan is upgraded.
 
 ## Final decision
 
