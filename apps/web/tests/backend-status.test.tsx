@@ -58,10 +58,22 @@ test("handles malformed response and retries once", async () => {
     .mockResolvedValueOnce(reply("ready", "up"));
   vi.stubGlobal("fetch", fetchMock);
   render(<BackendStatus />);
-  await screen.findByText("A backend nem érhető el. Próbáld újra.");
+  await screen.findByText("A backend válasza nem értelmezhető. Próbáld újra.");
   const button = screen.getByRole("button", { name: "Újraellenőrzés" });
   fireEvent.click(button);
   fireEvent.click(button);
   expect(await screen.findByText("A rendszer készen áll.")).toBeTruthy();
   expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+test("reports an unexpected response shape as invalid, not as unreachable", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ backend: "?" }))));
+  render(<BackendStatus />);
+  expect(await screen.findByText("A backend válasza nem értelmezhető. Próbáld újra.")).toBeTruthy();
+});
+
+test("reports a failed request as unreachable", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("network down")));
+  render(<BackendStatus />);
+  expect(await screen.findByText("A backend nem érhető el. Próbáld újra.")).toBeTruthy();
 });

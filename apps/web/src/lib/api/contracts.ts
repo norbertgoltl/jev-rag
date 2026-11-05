@@ -1,3 +1,16 @@
+import type { components } from "./generated/foundation";
+
+type Schemas = components["schemas"];
+
+// Literal values come from the OpenAPI contract. If the contract changes one of them, these
+// annotations stop compiling instead of silently drifting from the backend.
+const SERVICE_NAME: Schemas["SystemStatusResponse"]["service"] = "api";
+const SERVICE_OK: Schemas["SystemStatusResponse"]["status"] = "ok";
+const READY_STATUS: Schemas["ReadinessResponse"]["status"] = "ready";
+const QDRANT_UP: Schemas["ReadinessResponse"]["dependencies"]["qdrant"] = "up";
+const NOT_READY_STATUS: Schemas["NotReadyResponse"]["status"] = "not_ready";
+const QDRANT_DOWN: Schemas["NotReadyResponse"]["dependencies"]["qdrant"] = "down";
+
 export type Readiness = "ready" | "not_ready" | "unknown";
 export type QdrantState = "up" | "down" | "unknown";
 
@@ -11,8 +24,8 @@ export type Diagnostics = {
 
 /** Qdrant state implied by each readiness value; the only combinations the BFF emits. */
 export const QDRANT_BY_READINESS: Record<Readiness, QdrantState> = {
-  ready: "up",
-  not_ready: "down",
+  ready: QDRANT_UP,
+  not_ready: QDRANT_DOWN,
   unknown: "unknown",
 };
 
@@ -24,15 +37,17 @@ function isRecord(value: unknown): value is UnknownRecord {
 
 /** Accepts the `GET /api/v1/system/status` response defined by the OpenAPI contract. */
 export function isStatus(value: unknown): boolean {
-  return isRecord(value) && value.service === "api" && value.status === "ok";
+  return isRecord(value) && value.service === SERVICE_NAME && value.status === SERVICE_OK;
 }
 
 /** Maps a `GET /health/ready` response (HTTP status and body) to a readiness value. */
 export function readiness(value: unknown, httpStatus: number): Readiness {
   if (!isRecord(value) || !isRecord(value.dependencies)) return "unknown";
   const { status, dependencies } = value;
-  if (httpStatus === 200 && status === "ready" && dependencies.qdrant === "up") return "ready";
-  if (httpStatus === 503 && status === "not_ready" && dependencies.qdrant === "down") {
+  if (httpStatus === 200 && status === READY_STATUS && dependencies.qdrant === QDRANT_UP) {
+    return "ready";
+  }
+  if (httpStatus === 503 && status === NOT_READY_STATUS && dependencies.qdrant === QDRANT_DOWN) {
     return "not_ready";
   }
   return "unknown";

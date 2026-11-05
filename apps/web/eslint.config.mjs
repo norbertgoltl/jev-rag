@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "coverage/**",
+    // Generated from the OpenAPI contract.
+    "src/lib/api/generated/**",
   ]),
 ]);
 

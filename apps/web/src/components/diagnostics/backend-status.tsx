@@ -5,7 +5,7 @@ import { LOADING_MESSAGE, backendLabel, qdrantLabel, summaryMessage } from "./st
 import { useBackendStatus } from "./use-backend-status";
 
 export function BackendStatus() {
-  const { data, loading, timedOut, recheck } = useBackendStatus();
+  const { data, loading, problem, recheck } = useBackendStatus();
 
   return (
     <section className={styles.panel} aria-label="Rendszerállapot">
@@ -16,7 +16,7 @@ export function BackendStatus() {
           <>
             <StatusIndicator label="FastAPI" value={backendLabel(data)} />
             <StatusIndicator label="Qdrant" value={qdrantLabel(data)} />
-            <p>{summaryMessage(data, timedOut)}</p>
+            <p>{summaryMessage(data, problem)}</p>
           </>
         )}
       </div>

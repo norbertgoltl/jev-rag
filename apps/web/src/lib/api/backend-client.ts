@@ -1,12 +1,13 @@
 import "server-only";
 import { getConfig } from "../config/server";
 import { BackendError } from "./errors";
+import type { paths } from "./generated/foundation";
 
-/** Backend endpoints the BFF may call; defined by docs/architecture/contracts/foundation.openapi.json. */
+/** Backend endpoints the BFF may call; each must exist in the generated OpenAPI paths. */
 export const BACKEND_PATHS = {
   systemStatus: "/api/v1/system/status",
   readiness: "/health/ready",
-} as const;
+} as const satisfies Record<string, keyof paths>;
 
 export type BackendPath = (typeof BACKEND_PATHS)[keyof typeof BACKEND_PATHS];
 
