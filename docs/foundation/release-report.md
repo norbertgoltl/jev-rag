@@ -58,6 +58,33 @@ This release candidate was validated in the current workspace and an isolated lo
 
 **BLOCKED.** Local and isolated-clone quality, security, setup, infrastructure, and diagnostics checks passed. PR #23 has all four GitHub Actions jobs passing. Foundation release acceptance still requires the `security` check on the remaining PRs after PR #23 merges, adding it to the `main` required checks, and evidence that failed required checks block merging.
 
+## Re-validation after the code review (2026-11-05)
+
+The Foundation changed after the first record above (strict mypy gate, Prettier and generated contract types, API layering, startup and configuration clean-up, decision adapter clean-up, frontend error handling; PRs #26–#31). The gates were rerun on `main` commit `2298e62` (after PR #31) on macOS Apple Silicon with the same pinned runtimes (Python 3.14.8, Node.js 24.22.1, pnpm 12.15.0, Qdrant `qdrant/qdrant:v1.19.2`, Docker 29.9.2, Compose 5.6.1).
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| `make doctor` | PASS | Pinned tools, Docker, Compose, resources and host port checks passed. |
+| `make check` | PASS | Ruff, format, strict mypy (50 source files, config applied), generated API types up to date, 150 backend tests (99% coverage), Prettier, ESLint with zero warnings, tsc, 24 frontend tests (coverage floors met), production build. |
+| `make security-setup`, `make security-check`, `make security-smoke` | PASS | Gitleaks 8.30.1 history and working-tree scans, frontend and Qdrant boundaries, and all four negative cases were rejected. |
+| `make infra-test` | PASS | Startup, native ARM64, loopback ports, persistence, readiness recovery, idempotency and context safety. Its isolated project, network and volume were removed; no developer volume was touched. |
+| Integrated scenario (current checkout) | PASS | `make up`, API on 8000 and Next.js on 3000: readiness 200 with Qdrant up and the BFF reported backend online, readiness `ready`, Qdrant `up`. After `make down` (volume preserved) readiness returned 503 and the BFF reported readiness `not_ready`, Qdrant `down` while liveness stayed 200. Services were stopped afterwards. |
+| Clean clone: setup and doctor | NOT RUN | The clean-clone procedure was not repeated: creating the separate clone was blocked in the automated session. Run it manually (see the release checklist). The first record above remains the latest clean-clone evidence, for an earlier commit. |
+| GitHub Actions on pull requests #26–#31 | PASS with one exception | `backend`, `frontend`, `infrastructure` and `security` passed on #26, #27, #29, #30 and #31. On #28 the `frontend` job was still queued (run 42067447169) when the PR was merged and is still queued. |
+| GitHub Actions on `main` | PASS with one exception | The push run for the #31 merge (run [42087895091](https://github.com/norbertgoltl/jev-rag/actions/runs/42087895091)) passed all four jobs, as did the runs for #26, #27, #29 and #30. The run for the #28 merge commit `6924a7d` ended in `startup_failure` with no jobs; the following commits passed. |
+| `main` required checks include all four jobs | BLOCKED | The rulesets and branch-protection APIs return HTTP 403 ("Upgrade to GitHub Pro or make this repository public"). Required checks therefore cannot be configured or verified for this private repository on the current plan. |
+| Failed or missing required check blocks merge | FAIL (not enforced) | PR #28 was merged while its `frontend` check was still queued, which shows that checks are not enforced. |
+| GitHub secret scanning and push protection | NOT VERIFIED | The repository API reports no `security_and_analysis` data on the current plan. |
+
+### Decision after re-validation
+
+**BLOCKED.** The code is in better shape than at the first record: strict type checking now actually runs, the layers are separated, the contract types are generated and checked, and every local and CI gate passed on the merged state. The release is still blocked for process reasons, not code reasons:
+
+1. Required status checks cannot be enforced on a private repository on the current GitHub plan, and a merge already happened with an unfinished check. Make the repository public or upgrade the plan, then require `backend`, `frontend`, `infrastructure` and `security` and verify with a failing test PR.
+2. Rerun the clean-clone setup and the integrated scenario in that clone.
+3. Investigate the queued `frontend` run on PR #28 and the `startup_failure` on `main` commit `6924a7d` (rerun the workflow); both look like GitHub-side events but are unexplained.
+4. Confirm secret scanning and push protection in the repository settings when available.
+
 ## Erratum: strict mypy gate
 
 The backend type-check gate originally ran `mypy` from the repository root, so `[tool.mypy] strict = true` in `apps/api/pyproject.toml` was not applied and earlier "strict typecheck PASS" results were produced without strict mode. The gate (`make typecheck-backend` and the CI backend job) now passes `--config-file apps/api/pyproject.toml`. Under strict mode the test suite had 157 errors; they are fixed and `mypy` reports no issues in 46 source files.
