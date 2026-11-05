@@ -1,14 +1,17 @@
 import asyncio
 import json
 import logging
+from typing import Any
 from uuid import UUID
 
 import httpx
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
-from jev_rag_api.core.errors import ServiceUnavailableError
+from jev_rag_api.application.errors import ServiceUnavailableError
+from jev_rag_api.core.config import Settings
 from jev_rag_api.core.logging import JsonFormatter, logger, request_id_context
 from jev_rag_api.main import create_app
 
@@ -17,19 +20,19 @@ class Payload(BaseModel):
     count: int
 
 
-def error_app(settings):
+def error_app(settings: Settings) -> FastAPI:
     app = create_app(settings)
 
     @app.get("/failure")
-    async def failure():
+    async def failure() -> Any:
         raise RuntimeError("secret-exception-value")
 
     @app.post("/validation")
-    async def validation(payload: Payload):
+    async def validation(payload: Payload) -> Any:
         return payload
 
     @app.get("/dependency-failure")
-    async def dependency_failure():
+    async def dependency_failure() -> Any:
         raise ServiceUnavailableError("secret-dependency")
 
     return app
@@ -45,7 +48,7 @@ def error_app(settings):
         ("GET", "/dependency-failure", 503, "SERVICE_UNAVAILABLE"),
     ],
 )
-def test_error_contract(settings, method, path, status, code):
+def test_error_contract(settings: Settings, method: Any, path: Any, status: Any, code: Any) -> None:
     with TestClient(error_app(settings)) as client:
         response = client.request(
             method,
@@ -69,17 +72,17 @@ def test_error_contract(settings, method, path, status, code):
 
 
 @pytest.mark.parametrize("request_id", ["", "invalid id", "a" * 65])
-def test_invalid_request_id_is_replaced(settings, request_id):
+def test_invalid_request_id_is_replaced(settings: Settings, request_id: Any) -> None:
     with TestClient(create_app(settings)) as client:
         response = client.get("/health/live", headers={"X-Request-ID": request_id})
     assert UUID(response.headers["X-Request-ID"]).version == 4
 
 
-def test_parallel_requests_and_logging(settings):
+def test_parallel_requests_and_logging(settings: Settings) -> None:
     records = []
 
     class Capture(logging.Handler):
-        def emit(self, record):
+        def emit(self, record: Any) -> None:
             records.append(JsonFormatter().format(record))
 
     handler = Capture()
@@ -87,11 +90,11 @@ def test_parallel_requests_and_logging(settings):
     app = error_app(settings)
 
     @app.get("/parallel")
-    async def parallel():
+    async def parallel() -> Any:
         await asyncio.sleep(0)
         return {"request_id": request_id_context.get()}
 
-    async def exercise():
+    async def exercise() -> Any:
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app), base_url="http://test"
         ) as client:

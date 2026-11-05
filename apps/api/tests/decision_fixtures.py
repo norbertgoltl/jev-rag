@@ -1,32 +1,36 @@
+from typing import Any
+
 from jev_rag_api.domain.decisions.models import DecisionRequest, DecisionResult
 
 
-def request(language="en"):
-    return DecisionRequest(
-        state="Please review this synthetic ticket."
-        if language == "en"
-        else "Kérlek vizsgáld meg ezt a mesterséges hibajegyet.",
-        questions={
-            "category": {
-                "type": "choice",
-                "instructions": "Select a category.",
-                "criteria": {"support": "Support", "other": None},
+def request(language: Any = "en") -> DecisionRequest:
+    return DecisionRequest.model_validate(
+        dict(
+            state="Please review this synthetic ticket."
+            if language == "en"
+            else "Kérlek vizsgáld meg ezt a mesterséges hibajegyet.",
+            questions={
+                "category": {
+                    "type": "choice",
+                    "instructions": "Select a category.",
+                    "criteria": {"support": "Support", "other": None},
+                },
+                "urgency": {
+                    "type": "score",
+                    "instructions": "Rate urgency.",
+                    "criteria": ["Low", "High"],
+                },
+                "needs_action": {
+                    "type": "noul",
+                    "instructions": "Does this need action?",
+                    "criteria": {"true": "Needs action", "false": "No action"},
+                },
             },
-            "urgency": {
-                "type": "score",
-                "instructions": "Rate urgency.",
-                "criteria": ["Low", "High"],
-            },
-            "needs_action": {
-                "type": "noul",
-                "instructions": "Does this need action?",
-                "criteria": {"true": "Needs action", "false": "No action"},
-            },
-        },
+        )
     )
 
 
-def body():
+def body() -> dict[str, Any]:
     return {
         "model": "jev-1.13.0",
         "usage": {"input_tokens": 12, "output_tokens": 4},
@@ -49,7 +53,7 @@ def body():
     }
 
 
-def result():
+def result() -> DecisionResult:
     data = body()
     data["answers"]["urgency"].pop("legend")
     data["answers"]["urgency"]["probabilities"] = {0: 0.25, 1: 0.75}

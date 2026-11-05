@@ -12,7 +12,7 @@ from jev_rag_api.domain.decisions.models import (
 )
 
 
-def map_questions(request: DecisionRequest):
+def map_questions(request: DecisionRequest) -> dict[str, sdk.Choice | sdk.Score | sdk.Noul]:
     types = {"choice": sdk.Choice, "score": sdk.Score, "noul": sdk.Noul}
     return {
         name: types[question.type](**question.model_dump(exclude={"type"}, exclude_none=True))
