@@ -8,13 +8,20 @@ from jev_rag_api.domain.decisions.errors import (
     DecisionInvalidResponseError,
     DecisionUnavailableError,
 )
+from jev_rag_api.domain.decisions.models import (
+    DecisionRequest,
+    DecisionResult,
+    NoulAnswer,
+    NoulQuestionSpec,
+    QuestionSpec,
+)
 from jev_rag_api.integrations.jev.mock import DisabledDecisionAdapter, MockDecisionAdapter
 
 
 @pytest.mark.parametrize("language", ["hu", "en"])
 def test_deterministic_fixture(language: Any) -> None:
     req = request(language)
-    adapter = MockDecisionAdapter({MockDecisionAdapter.key(req): result()})
+    adapter = MockDecisionAdapter([(req, result())])
     assert asyncio.run(adapter.evaluate(req)) == asyncio.run(adapter.evaluate(req)) == result()
     with pytest.raises(DecisionInvalidResponseError):
         asyncio.run(adapter.evaluate(request("hu" if language == "en" else "en")))
@@ -39,6 +46,30 @@ def test_invalid_mutated_fixture_is_not_accepted() -> None:
     req = request()
     fixture = result()
     fixture.answers["needs_action"].__dict__["noul"] = float("nan")
-    adapter = MockDecisionAdapter({MockDecisionAdapter.key(req): fixture})
+    adapter = MockDecisionAdapter([(req, fixture)])
     with pytest.raises(DecisionInvalidResponseError):
         asyncio.run(adapter.evaluate(req))
+
+
+def test_fixture_matches_regardless_of_dictionary_order() -> None:
+    first = DecisionRequest(
+        state={"a": 1, "b": 2},
+        questions={"q": NoulQuestionSpec(instructions="Is it urgent?")},
+    )
+    reordered = DecisionRequest(
+        state={"b": 2, "a": 1},
+        questions={"q": NoulQuestionSpec(instructions="Is it urgent?")},
+    )
+    answer = DecisionResult(model="jev-1.13.0", answers={"q": NoulAnswer(noul=0.5)})
+    adapter = MockDecisionAdapter([(first, answer)])
+    assert asyncio.run(adapter.evaluate(reordered)) == answer
+
+
+def test_fixture_distinguishes_boolean_from_integer_state() -> None:
+    questions: dict[str, QuestionSpec] = {"q": NoulQuestionSpec(instructions="Is it urgent?")}
+    answer = DecisionResult(model="jev-1.13.0", answers={"q": NoulAnswer(noul=0.5)})
+    adapter = MockDecisionAdapter(
+        [(DecisionRequest(state={"flag": True}, questions=questions), answer)]
+    )
+    with pytest.raises(DecisionInvalidResponseError):
+        asyncio.run(adapter.evaluate(DecisionRequest(state={"flag": 1}, questions=questions)))

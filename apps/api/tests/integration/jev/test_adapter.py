@@ -16,7 +16,7 @@ from jev_rag_api.domain.decisions.errors import (
     DecisionTimeoutError,
     DecisionUnavailableError,
 )
-from jev_rag_api.integrations.jev.adapter import TypeSafeDecisionAdapter
+from jev_rag_api.integrations.jev.adapter import TypeSafeDecisionAdapter, translate_sdk_error
 
 
 def evaluate(handler: Any, req: Any = None, retries: Any = 0) -> Any:
@@ -212,3 +212,43 @@ def test_actual_provider_model_is_preserved() -> None:
     data = body()
     data["model"] = "jev-1.14.0"
     assert evaluate(lambda req: httpx2.Response(200, json=data)).model == "jev-1.14.0"
+
+
+@pytest.mark.parametrize(
+    "sdk_error,expected",
+    [
+        (sdk.TypeSafeBadRequestError, DecisionInvalidRequestError),
+        (sdk.TypeSafeUnprocessableEntityError, DecisionInvalidRequestError),
+        (sdk.TypeSafeAuthenticationError, DecisionAuthenticationError),
+        (sdk.TypeSafePermissionDeniedError, DecisionAuthenticationError),
+        (sdk.TypeSafeRateLimitError, DecisionRateLimitedError),
+        (sdk.TypeSafeNotFoundError, DecisionUnavailableError),
+        (sdk.TypeSafeInternalServerError, DecisionUnavailableError),
+        (sdk.TypeSafeAPITimeoutError, DecisionTimeoutError),
+        (sdk.TypeSafeAPIConnectionError, DecisionUnavailableError),
+        (sdk.TypeSafeAPIResponseValidationError, DecisionInvalidResponseError),
+    ],
+)
+def test_sdk_error_types_map_to_domain_errors(sdk_error: Any, expected: Any) -> None:
+    assert type(translate_sdk_error(sdk_error.__new__(sdk_error))) is expected
+
+
+def test_unknown_sdk_error_is_provider_unavailable_not_invalid_request() -> None:
+    assert type(translate_sdk_error(sdk.TypeSafeError())) is DecisionUnavailableError
+
+
+def test_request_mapping_failure_is_invalid_request(monkeypatch: pytest.MonkeyPatch) -> None:
+    def reject(request: Any) -> Any:
+        raise sdk.TypeSafeError("secret-state")
+
+    monkeypatch.setattr("jev_rag_api.integrations.jev.adapter.map_questions", reject)
+    calls: list[Any] = []
+
+    def handler(req: Any) -> Any:
+        calls.append(req)
+        return httpx2.Response(200, json=body())
+
+    with pytest.raises(DecisionInvalidRequestError) as caught:
+        evaluate(handler)
+    assert "secret-state" not in str(caught.value)
+    assert calls == []

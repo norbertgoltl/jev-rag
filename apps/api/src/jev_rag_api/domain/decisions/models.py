@@ -1,3 +1,4 @@
+import json
 from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, StringConstraints, model_validator
@@ -41,8 +42,6 @@ class DecisionRequest(Model):
 
     @model_validator(mode="after")
     def validate_json_state(self) -> Self:
-        import json
-
         json.dumps(self.state, allow_nan=False)
         return self
 
@@ -77,24 +76,34 @@ class DecisionResult(Model):
     output_tokens: Annotated[int, Field(strict=True, ge=0)] | None = None
 
     def validate_for(self, request: DecisionRequest) -> Self:
+        """Raise DecisionInvalidResponseError unless every answer fits its question."""
         if self.answers.keys() != request.questions.keys():
             raise DecisionInvalidResponseError()
         for name, question in request.questions.items():
-            answer = self.answers[name]
-            if answer.type != question.type:
+            if not _answer_fits(question, self.answers[name]):
                 raise DecisionInvalidResponseError()
-            if isinstance(question, ChoiceQuestionSpec):
-                if (
-                    not isinstance(answer, ChoiceAnswer)
-                    or answer.choice not in question.criteria
-                    or set(answer.probabilities) != set(question.criteria)
-                ):
-                    raise DecisionInvalidResponseError()
-            elif isinstance(question, ScoreQuestionSpec):
-                if (
-                    not isinstance(answer, ScoreAnswer)
-                    or answer.score > len(question.criteria) - 1
-                    or set(answer.probabilities) != set(range(len(question.criteria)))
-                ):
-                    raise DecisionInvalidResponseError()
         return self
+
+
+def _choice_answer_fits(question: ChoiceQuestionSpec, answer: ChoiceAnswer) -> bool:
+    return answer.choice in question.criteria and set(answer.probabilities) == set(
+        question.criteria
+    )
+
+
+def _score_answer_fits(question: ScoreQuestionSpec, answer: ScoreAnswer) -> bool:
+    last_level = len(question.criteria) - 1
+    return answer.score <= last_level and set(answer.probabilities) == set(range(last_level + 1))
+
+
+def _answer_fits(
+    question: ChoiceQuestionSpec | ScoreQuestionSpec | NoulQuestionSpec, answer: DecisionAnswer
+) -> bool:
+    """Check the answer type and its consistency with the question definition."""
+    if isinstance(question, ChoiceQuestionSpec):
+        return isinstance(answer, ChoiceAnswer) and _choice_answer_fits(question, answer)
+    if isinstance(question, ScoreQuestionSpec):
+        return isinstance(answer, ScoreAnswer) and _score_answer_fits(question, answer)
+    # A noul answer has no question-specific constraint beyond its type; the probability
+    # range is already enforced by NoulAnswer.
+    return isinstance(answer, NoulAnswer)

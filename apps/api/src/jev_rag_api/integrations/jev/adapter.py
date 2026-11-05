@@ -36,6 +36,32 @@ def configure_sdk_logging() -> None:
         sdk_logger.addFilter(SafeSDKLogFilter())
 
 
+_STATUS_ERRORS: tuple[tuple[type[sdk.TypeSafeError], type[DecisionError]], ...] = (
+    (sdk.TypeSafeBadRequestError, DecisionInvalidRequestError),
+    (sdk.TypeSafeUnprocessableEntityError, DecisionInvalidRequestError),
+    (sdk.TypeSafeAuthenticationError, DecisionAuthenticationError),
+    (sdk.TypeSafePermissionDeniedError, DecisionAuthenticationError),
+    (sdk.TypeSafeRateLimitError, DecisionRateLimitedError),
+)
+
+
+def translate_sdk_error(error: sdk.TypeSafeError) -> DecisionError:
+    """Map an SDK failure raised by the provider call to a sanitized domain error."""
+    if isinstance(error, sdk.TypeSafeAPITimeoutError):
+        return DecisionTimeoutError()
+    if isinstance(error, sdk.TypeSafeAPIResponseValidationError):
+        return DecisionInvalidResponseError()
+    for sdk_type, domain_type in _STATUS_ERRORS:
+        if isinstance(error, sdk_type):
+            return domain_type()
+    # Remaining API status errors, connection failures and unknown SDK errors are provider-side.
+    return DecisionUnavailableError()
+
+
+def _elapsed_ms(started: float) -> float:
+    return round((time.perf_counter() - started) * 1000, 3)
+
+
 class TypeSafeDecisionAdapter:
     def __init__(self, client: sdk.AsyncTypeSafeClient) -> None:
         configure_sdk_logging()
@@ -44,49 +70,37 @@ class TypeSafeDecisionAdapter:
     async def evaluate(self, request: DecisionRequest) -> DecisionResult:
         started = time.perf_counter()
         try:
-            response = await self.client.system_one(
-                state=request.state, questions=map_questions(request)
-            )
-            result = map_response(request, response)
-        except sdk.TypeSafeAPITimeoutError:
-            error: DecisionError = DecisionTimeoutError()
-        except sdk.TypeSafeAPIResponseValidationError:
-            error = DecisionInvalidResponseError()
-        except sdk.TypeSafeAPIError as exc:
-            status = exc.status_code if hasattr(exc, "status_code") else exc.status
-            error_type = {
-                400: DecisionInvalidRequestError,
-                422: DecisionInvalidRequestError,
-                401: DecisionAuthenticationError,
-                403: DecisionAuthenticationError,
-                429: DecisionRateLimitedError,
-            }.get(status, DecisionUnavailableError)
-            error = error_type()
-        except sdk.TypeSafeAPIConnectionError:
-            error = DecisionUnavailableError()
-        except sdk.TypeSafeError:
-            error = DecisionInvalidRequestError()
-        except DecisionError as exc:
-            error = exc
-        else:
-            logger.info(
-                "jev_decision_completed",
+            result = await self._call_provider(request)
+        except DecisionError as error:
+            logger.warning(
+                "jev_decision_failed",
                 extra={
-                    "model": result.model,
-                    "provider_request_id": result.provider_request_id,
+                    "error_code": error.code,
+                    "duration_ms": _elapsed_ms(started),
                     "question_count": len(request.questions),
-                    "question_types": [q.type for q in request.questions.values()],
-                    "duration_ms": round((time.perf_counter() - started) * 1000, 3),
-                    "input_tokens": result.input_tokens,
                 },
             )
-            return result
-        logger.warning(
-            "jev_decision_failed",
+            raise error from None
+        logger.info(
+            "jev_decision_completed",
             extra={
-                "error_code": error.code,
-                "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+                "model": result.model,
+                "provider_request_id": result.provider_request_id,
                 "question_count": len(request.questions),
+                "question_types": [q.type for q in request.questions.values()],
+                "duration_ms": _elapsed_ms(started),
+                "input_tokens": result.input_tokens,
             },
         )
-        raise error from None
+        return result
+
+    async def _call_provider(self, request: DecisionRequest) -> DecisionResult:
+        try:
+            questions = map_questions(request)
+        except sdk.TypeSafeError, ValueError:
+            raise DecisionInvalidRequestError() from None
+        try:
+            response = await self.client.system_one(state=request.state, questions=questions)
+        except sdk.TypeSafeError as error:
+            raise translate_sdk_error(error) from None
+        return map_response(request, response)

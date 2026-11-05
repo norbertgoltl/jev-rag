@@ -41,7 +41,16 @@ def test_invalid_probability(value: Any) -> None:
 
 @pytest.mark.parametrize(
     "change",
-    ["missing", "extra", "type", "choice", "choice_distribution", "score", "score_distribution"],
+    [
+        "missing",
+        "extra",
+        "type",
+        "noul_type",
+        "choice",
+        "choice_distribution",
+        "score",
+        "score_distribution",
+    ],
 )
 def test_invalid_result_for_request(change: Any) -> None:
     data = result().model_dump()
@@ -51,6 +60,13 @@ def test_invalid_result_for_request(change: Any) -> None:
         data["answers"]["extra"] = {"type": "noul", "noul": 0.5}
     if change == "type":
         data["answers"]["category"] = {"type": "noul", "noul": 0.5}
+    if change == "noul_type":
+        data["answers"]["needs_action"] = {
+            "type": "choice",
+            "choice": "support",
+            "probabilities": {"support": 1.0},
+            "confidence": 1.0,
+        }
     if change == "choice":
         data["answers"]["category"]["choice"] = "unknown"
     if change == "choice_distribution":
