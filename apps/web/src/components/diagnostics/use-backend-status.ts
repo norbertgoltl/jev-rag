@@ -5,23 +5,43 @@ import { type Diagnostics, isDiagnostics } from "@/lib/api/contracts";
 const STATUS_URL = "/api/backend/status";
 const GATEWAY_TIMEOUT = 504;
 
-async function fetchDiagnostics(
-  signal: AbortSignal,
-): Promise<{ data: Diagnostics; timedOut: boolean }> {
-  const response = await fetch(STATUS_URL, { cache: "no-store", signal });
-  const value: unknown = await response.json();
+/** Why the latest check produced no usable diagnostics, or null when it did. */
+export type StatusProblem = "timeout" | "unreachable" | "invalid_response" | null;
+
+class InvalidDiagnosticsError extends Error {}
+
+async function readDiagnostics(response: Response, signal: AbortSignal): Promise<Diagnostics> {
+  let value: unknown;
+  try {
+    value = await response.json();
+  } catch (error) {
+    if (signal.aborted) throw error;
+    throw new InvalidDiagnosticsError("Diagnostics response is not JSON");
+  }
   const expectedBackend = response.ok ? "online" : "offline";
   if (!isDiagnostics(value) || value.backend !== expectedBackend) {
-    throw new Error("Invalid diagnostics");
+    throw new InvalidDiagnosticsError("Diagnostics response has an unexpected shape");
   }
-  return { data: value, timedOut: response.status === GATEWAY_TIMEOUT };
+  return value;
+}
+
+async function fetchDiagnostics(
+  signal: AbortSignal,
+): Promise<{ data: Diagnostics; problem: StatusProblem }> {
+  const response = await fetch(STATUS_URL, { cache: "no-store", signal });
+  const data = await readDiagnostics(response, signal);
+  return { data, problem: response.status === GATEWAY_TIMEOUT ? "timeout" : null };
+}
+
+function problemOf(error: unknown): StatusProblem {
+  return error instanceof InvalidDiagnosticsError ? "invalid_response" : "unreachable";
 }
 
 /** Loads backend diagnostics from the BFF, allows a single in-flight request, and exposes a recheck. */
 export function useBackendStatus() {
   const [data, setData] = useState<Diagnostics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timedOut, setTimedOut] = useState(false);
+  const [problem, setProblem] = useState<StatusProblem>(null);
   const pending = useRef<AbortController | null>(null);
 
   const check = useCallback(async () => {
@@ -32,10 +52,13 @@ export function useBackendStatus() {
       const result = await fetchDiagnostics(controller.signal);
       if (!controller.signal.aborted) {
         setData(result.data);
-        setTimedOut(result.timedOut);
+        setProblem(result.problem);
       }
-    } catch {
-      if (!controller.signal.aborted) setData(null);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setData(null);
+        setProblem(problemOf(error));
+      }
     } finally {
       if (pending.current === controller) {
         pending.current = null;
@@ -47,7 +70,7 @@ export function useBackendStatus() {
   const recheck = useCallback(() => {
     if (pending.current) return;
     setLoading(true);
-    setTimedOut(false);
+    setProblem(null);
     void check();
   }, [check]);
 
@@ -61,5 +84,5 @@ export function useBackendStatus() {
     };
   }, [check]);
 
-  return { data, loading, timedOut, recheck };
+  return { data, loading, problem, recheck };
 }

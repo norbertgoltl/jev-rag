@@ -1,4 +1,5 @@
 import type { Diagnostics } from "@/lib/api/contracts";
+import type { StatusProblem } from "./use-backend-status";
 
 export const LOADING_MESSAGE = "Állapot ellenőrzése…";
 
@@ -28,9 +29,14 @@ function onlineSummary(readiness: Diagnostics["readiness"]): string {
   }
 }
 
-export function summaryMessage(data: Diagnostics | null, timedOut: boolean): string {
+export function summaryMessage(data: Diagnostics | null, problem: StatusProblem): string {
   if (data?.backend === "online") return onlineSummary(data.readiness);
-  return timedOut
-    ? "A backend válaszára várakozás lejárt."
-    : "A backend nem érhető el. Próbáld újra.";
+  switch (problem) {
+    case "timeout":
+      return "A backend válaszára várakozás lejárt.";
+    case "invalid_response":
+      return "A backend válasza nem értelmezhető. Próbáld újra.";
+    default:
+      return "A backend nem érhető el. Próbáld újra.";
+  }
 }
