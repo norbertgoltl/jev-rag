@@ -31,6 +31,20 @@ make down
 
 A clean setup must be performed in a separate clone. Do not overwrite an existing `.env`, reset Docker Desktop, delete the normal Qdrant volume, or use `down -v`. `make check` is offline and does not call the live Jev API. A live smoke is optional and requires explicit authorization.
 
+### Isolating the clean clone from the developer environment
+
+Clone outside the working repository (a nested clone shows up as untracked files and is scanned by the working repository's security check). Create the clone's `.env` from `.env.example` only, then set an isolated Docker identity and ports so no developer resource is reused:
+
+```sh
+cp .env.example .env
+sed -i '' 's/^COMPOSE_PROJECT_NAME=.*/COMPOSE_PROJECT_NAME=jev-rag-release-gate/' .env
+sed -i '' 's/^QDRANT_HOST_PORT=.*/QDRANT_HOST_PORT=6343/' .env
+sed -i '' 's#^QDRANT_URL=.*#QDRANT_URL=http://127.0.0.1:6343#' .env
+sed -i '' 's/^API_PORT=.*/API_PORT=8043/' .env
+```
+
+Before starting anything, check that `docker compose --env-file .env -f infra/compose.yaml config` reports `name: jev-rag-release-gate`, published port `6343`, and the volume `jev-rag-release-gate_qdrant_data`, and that `TYPESAFE_API_KEY` is empty (the clone must be secretless; never copy the working repository's `.env`). Start the web server with `BACKEND_API_URL=http://127.0.0.1:8043`. Clean up by name only: `make down`, then `docker volume rm jev-rag-release-gate_qdrant_data`.
+
 ## Required GitHub checks
 
 The `main` ruleset must require the exact successful checks `backend`, `frontend`, `infrastructure`, and `security`, with up-to-date branches and pull requests. A failed or missing required check must block merging. Record an actual test PR or ruleset evidence before marking this acceptance item `PASS`. Rulesets and branch protection are not available for a private repository on a free GitHub plan (the API returns HTTP 403); in that case the item stays `BLOCKED` until the repository is public or the plan is upgraded. Verify blocking with a temporary, intentionally failing pull request that is closed without merging; `mergeStateStatus: BLOCKED` on a non-draft PR is sufficient evidence, so do not attempt the merge.
