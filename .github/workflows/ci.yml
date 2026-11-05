@@ -50,6 +50,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm --filter @jev-rag/web lint --max-warnings 0
+      - run: corepack pnpm --filter @jev-rag/web format:check
       - run: corepack pnpm --filter @jev-rag/web typecheck
       - run: corepack pnpm --filter @jev-rag/web test:coverage
       - run: corepack pnpm --filter @jev-rag/web build

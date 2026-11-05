@@ -31,8 +31,9 @@ Available now:
 Quality commands:
   setup       Install locked API and web dependencies (FND-008, FND-012)
   lint-backend, format-check-backend, typecheck-backend, test-backend
-  lint-frontend, typecheck-frontend, test-frontend, build-web
+  lint-frontend, format-check-frontend, typecheck-frontend, test-frontend, build-web
   format      Explicitly format backend sources
+  format-frontend  Explicitly format frontend sources
 
 No command sources .env as shell code.
 HELP
@@ -86,12 +87,12 @@ HELP
         cd "$REPO_ROOT"
         exec uv run --project apps/api --managed-python --locked pytest "$REPO_ROOT/apps/api/tests/live/test_jev_smoke.py" --jev-live
         ;;
-    lint|lint-backend|lint-frontend|format|format-check|format-check-backend|typecheck|typecheck-backend|typecheck-frontend|test|test-backend|test-frontend|build-web|check)
+    lint|lint-backend|lint-frontend|format|format-frontend|format-check|format-check-backend|format-check-frontend|typecheck|typecheck-backend|typecheck-frontend|test|test-backend|test-frontend|build-web|check)
         case "$1" in
             lint-backend|format-check-backend|format|typecheck-backend|test-backend)
                 require_command uv 'Install uv first.'
                 ;;
-            lint-frontend|typecheck-frontend|test-frontend|build-web)
+            lint-frontend|format-frontend|format-check-frontend|typecheck-frontend|test-frontend|build-web)
                 require_command pnpm 'Activate the pinned pnpm version first.'
                 ;;
             *)
@@ -105,7 +106,7 @@ HELP
                 require_file apps/api/pyproject.toml FND-008
                 require_file apps/api/uv.lock FND-008
                 ;;
-            lint-frontend|typecheck-frontend|test-frontend|build-web)
+            lint-frontend|format-frontend|format-check-frontend|typecheck-frontend|test-frontend|build-web)
                 require_file apps/web/package.json FND-012
                 require_file pnpm-lock.yaml FND-012
                 ;;
@@ -117,17 +118,20 @@ HELP
             typecheck-backend) exec uv run --project apps/api --managed-python --locked mypy apps/api/src/jev_rag_api apps/api/tests ;;
             test-backend) exec uv run --project apps/api --managed-python --locked pytest apps/api/tests -m 'not live' ;;
             lint-frontend) exec pnpm --filter @jev-rag/web lint --max-warnings 0 ;;
+            format-frontend) exec pnpm --filter @jev-rag/web format ;;
+            format-check-frontend) exec pnpm --filter @jev-rag/web format:check ;;
             typecheck-frontend) exec pnpm --filter @jev-rag/web typecheck ;;
             test-frontend) exec pnpm --filter @jev-rag/web test:coverage ;;
             build-web) exec pnpm --filter @jev-rag/web build ;;
             lint) "$0" lint-backend; exec "$0" lint-frontend ;;
-            format-check) exec "$0" format-check-backend ;;
+            format-check) "$0" format-check-backend; exec "$0" format-check-frontend ;;
             typecheck) "$0" typecheck-backend; exec "$0" typecheck-frontend ;;
             test) "$0" test-backend; exec "$0" test-frontend ;;
             check)
                 "$0" lint-backend
                 "$0" lint-frontend
                 "$0" format-check-backend
+                "$0" format-check-frontend
                 "$0" typecheck-backend
                 "$0" typecheck-frontend
                 "$0" test-backend

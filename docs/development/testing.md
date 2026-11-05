@@ -10,7 +10,7 @@ Unit tests and offline integration tests use local fixtures and mocked transport
 
 ## Frontend
 
-The frontend is part of the root pnpm workspace. Use `corepack pnpm install --frozen-lockfile` to install dependencies. The targets `make lint-frontend`, `make typecheck-frontend`, `make test-frontend`, and `make build-web` run ESLint, Next.js type generation plus TypeScript, Vitest V8 coverage, and the production build. React tests use jsdom; server API tests opt into Node. Coverage floors are 80% lines, statements, and functions, and 70% branches.
+The frontend is part of the root pnpm workspace. Use `corepack pnpm install --frozen-lockfile` to install dependencies. The targets `make lint-frontend`, `make format-check-frontend`, `make typecheck-frontend`, `make test-frontend`, and `make build-web` run ESLint, Prettier verification, Next.js type generation plus TypeScript, Vitest V8 coverage, and the production build. Run `make format-frontend` only when you intend to modify frontend files. `apps/web/tests/openapi-contract.test.ts` checks the BFF's contract guards against the examples and paths in `docs/architecture/contracts/foundation.openapi.json`, so contract drift fails the tests. React tests use jsdom; server API tests opt into Node. Coverage floors are 80% lines, statements, and functions, and 70% branches.
 
 ## Security
 

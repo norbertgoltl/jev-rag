@@ -14,7 +14,11 @@ export default defineConfig({
     clearMocks: true,
     coverage: {
       provider: "v8",
-      include: ["src/lib/**/*.ts", "src/components/diagnostics/**/*.{ts,tsx}", "src/app/api/**/*.ts"],
+      include: [
+        "src/lib/**/*.ts",
+        "src/components/diagnostics/**/*.{ts,tsx}",
+        "src/app/api/**/*.ts",
+      ],
       exclude: ["**/*.d.ts", "**/*.test.*"],
       reporter: ["text", "lcov", "json-summary"],
       thresholds: { lines: 80, statements: 80, functions: 80, branches: 70 },
