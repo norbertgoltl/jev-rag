@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from typing import Any
 
 import httpx2
 import pytest
@@ -18,8 +19,8 @@ from jev_rag_api.domain.decisions.errors import (
 from jev_rag_api.integrations.jev.adapter import TypeSafeDecisionAdapter
 
 
-def evaluate(handler, req=None, retries=0):
-    async def scenario():
+def evaluate(handler: Any, req: Any = None, retries: Any = 0) -> Any:
+    async def scenario() -> Any:
         async with sdk.AsyncTypeSafeClient(
             api_key="test-key",
             model="jev-1.13.0",
@@ -40,8 +41,8 @@ def evaluate(handler, req=None, retries=0):
 
 
 @pytest.mark.parametrize("language", ["hu", "en"])
-def test_real_sdk_wire_contract(language):
-    def handler(req):
+def test_real_sdk_wire_contract(language: Any) -> None:
+    def handler(req: Any) -> Any:
         sent = json.loads(req.content)
         assert sent["model"] == "jev-1.13.0"
         assert sent["state"] == request(language).state
@@ -73,10 +74,12 @@ def test_real_sdk_wire_contract(language):
         (503, DecisionUnavailableError, 2),
     ],
 )
-def test_errors_and_bounded_retry(status, error, attempts, caplog):
+def test_errors_and_bounded_retry(
+    status: Any, error: Any, attempts: Any, caplog: pytest.LogCaptureFixture
+) -> None:
     calls = []
 
-    def handler(req):
+    def handler(req: Any) -> Any:
         calls.append(req)
         return httpx2.Response(
             status, json={"error": "private-state-and-api-key"}, headers={"Retry-After": "0"}
@@ -94,8 +97,8 @@ def test_errors_and_bounded_retry(status, error, attempts, caplog):
     "exc,error",
     [(httpx2.ConnectError, DecisionUnavailableError), (httpx2.ReadTimeout, DecisionTimeoutError)],
 )
-def test_transport_errors(exc, error):
-    def handler(req):
+def test_transport_errors(exc: Any, error: Any) -> None:
+    def handler(req: Any) -> Any:
         raise exc("secret-state", request=req)
 
     with pytest.raises(error) as caught:
@@ -116,7 +119,7 @@ def test_transport_errors(exc, error):
         "invalid_json",
     ],
 )
-def test_invalid_sdk_responses(mutation):
+def test_invalid_sdk_responses(mutation: Any) -> None:
     data = body()
     if mutation == "missing":
         del data["answers"]["category"]
@@ -133,7 +136,7 @@ def test_invalid_sdk_responses(mutation):
     if mutation == "wrong_scale":
         data["answers"]["urgency"]["score"] = 3.0
 
-    def handler(req):
+    def handler(req: Any) -> Any:
         return (
             httpx2.Response(200, content=b"not json")
             if mutation == "invalid_json"
@@ -144,7 +147,7 @@ def test_invalid_sdk_responses(mutation):
         evaluate(handler)
 
 
-def test_sdk_warning_sanitizes_question_names(caplog):
+def test_sdk_warning_sanitizes_question_names(caplog: pytest.LogCaptureFixture) -> None:
     secret = "secret-user-text"
     data = body()
     data["answers"][secret] = {"type": "future", "value": secret}
@@ -155,7 +158,7 @@ def test_sdk_warning_sanitizes_question_names(caplog):
     assert "typesafe_sdk_warning" in caplog.text
 
 
-def test_no_request_id_and_absent_usage_metadata():
+def test_no_request_id_and_absent_usage_metadata() -> None:
     data = body()
     data["usage"] = {}
     result = evaluate(lambda req: httpx2.Response(200, json=data))
@@ -163,13 +166,13 @@ def test_no_request_id_and_absent_usage_metadata():
     assert result.input_tokens is None and result.output_tokens is None
 
 
-def test_retry_after_is_honored_without_real_sleep():
+def test_retry_after_is_honored_without_real_sleep() -> None:
     from unittest.mock import AsyncMock
 
-    async def scenario():
+    async def scenario() -> Any:
         calls = []
 
-        def handler(req):
+        def handler(req: Any) -> Any:
             calls.append(req)
             return (
                 httpx2.Response(429, json={"error": "limited"}, headers={"Retry-After": "2"})
@@ -193,10 +196,10 @@ def test_retry_after_is_honored_without_real_sleep():
     asyncio.run(scenario())
 
 
-def test_retry_budget_rejects_delay_without_sleep():
+def test_retry_budget_rejects_delay_without_sleep() -> None:
     calls = []
 
-    def handler(req):
+    def handler(req: Any) -> Any:
         calls.append(req)
         return httpx2.Response(429, json={"error": "limited"}, headers={"Retry-After": "20"})
 
@@ -205,7 +208,7 @@ def test_retry_budget_rejects_delay_without_sleep():
     assert len(calls) == 1
 
 
-def test_actual_provider_model_is_preserved():
+def test_actual_provider_model_is_preserved() -> None:
     data = body()
     data["model"] = "jev-1.14.0"
     assert evaluate(lambda req: httpx2.Response(200, json=data)).model == "jev-1.14.0"

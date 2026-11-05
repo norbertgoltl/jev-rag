@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from pydantic import ValidationError
 
@@ -22,7 +24,7 @@ from jev_rag_api.domain.decisions.models import DecisionRequest, DecisionResult
         {"questions": {"q": {"type": "noul", "instructions": "x", "criteria": {"unknown": "x"}}}},
     ],
 )
-def test_invalid_request(patch):
+def test_invalid_request(patch: Any) -> None:
     data = request().model_dump()
     data.update(patch)
     with pytest.raises(ValidationError):
@@ -30,7 +32,7 @@ def test_invalid_request(patch):
 
 
 @pytest.mark.parametrize("value", [-0.1, 1.1, float("inf"), float("nan"), True, "0.5"])
-def test_invalid_probability(value):
+def test_invalid_probability(value: Any) -> None:
     data = result().model_dump()
     data["answers"]["needs_action"]["noul"] = value
     with pytest.raises(ValidationError):
@@ -41,7 +43,7 @@ def test_invalid_probability(value):
     "change",
     ["missing", "extra", "type", "choice", "choice_distribution", "score", "score_distribution"],
 )
-def test_invalid_result_for_request(change):
+def test_invalid_result_for_request(change: Any) -> None:
     data = result().model_dump()
     if change == "missing":
         del data["answers"]["category"]
@@ -61,7 +63,7 @@ def test_invalid_result_for_request(change):
         DecisionResult.model_validate(data).validate_for(request())
 
 
-def test_domain_and_application_have_no_sdk_imports():
+def test_domain_and_application_have_no_sdk_imports() -> None:
     import ast
     from pathlib import Path
 

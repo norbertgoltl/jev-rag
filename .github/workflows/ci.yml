@@ -31,7 +31,7 @@ jobs:
       - run: uv lock --project apps/api --check
       - run: uv run --project apps/api --locked ruff check apps/api
       - run: uv run --project apps/api --locked ruff format --check apps/api
-      - run: uv run --project apps/api --locked mypy apps/api/src/jev_rag_api apps/api/tests
+      - run: uv run --project apps/api --locked mypy --config-file apps/api/pyproject.toml apps/api/src/jev_rag_api apps/api/tests
       - run: uv run --project apps/api --locked pytest apps/api/tests -m 'not live'
 
   frontend:
@@ -50,6 +50,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm --filter @jev-rag/web lint --max-warnings 0
+      - run: corepack pnpm --filter @jev-rag/web format:check
       - run: corepack pnpm --filter @jev-rag/web typecheck
       - run: corepack pnpm --filter @jev-rag/web test:coverage
       - run: corepack pnpm --filter @jev-rag/web build

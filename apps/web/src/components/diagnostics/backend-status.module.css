@@ -1,1 +1,6 @@
-.panel { padding: 1.5rem; border: 1px solid #cbd5e1; border-radius: 0.75rem; background: white; }
+.panel {
+  padding: 1.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: white;
+}
