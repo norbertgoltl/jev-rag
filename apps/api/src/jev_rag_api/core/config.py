@@ -5,7 +5,19 @@ from urllib.parse import urlsplit
 from pydantic import Field, HttpUrl, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-ROOT_ENV_FILE = Path(__file__).resolve().parents[5] / ".env"
+REPOSITORY_MARKER = "pnpm-workspace.yaml"
+JevMode = Literal["mock", "live", "disabled"]
+
+
+def find_env_file() -> Path | None:
+    """Return the repository-root ``.env`` path, or None outside a source checkout."""
+    for directory in Path(__file__).resolve().parents:
+        if (directory / REPOSITORY_MARKER).is_file():
+            return directory / ".env"
+    return None
+
+
+ROOT_ENV_FILE = find_env_file()
 
 
 class Settings(BaseSettings):
@@ -25,7 +37,7 @@ class Settings(BaseSettings):
     qdrant_url: HttpUrl = HttpUrl("http://127.0.0.1:6333")
     qdrant_timeout_seconds: float = Field(default=1.0, gt=0, allow_inf_nan=False)
 
-    jev_mode: Literal["mock", "live", "disabled"] | None = None
+    jev_mode: JevMode | None = None
     typesafe_api_key: SecretStr | None = Field(default=None, repr=False)
     typesafe_model: Literal["jev-1.13.0"] = "jev-1.13.0"
     typesafe_timeout_seconds: float = Field(default=5.0, gt=0, allow_inf_nan=False)
@@ -60,9 +72,7 @@ class Settings(BaseSettings):
             raise ValueError("Debug mode is forbidden in production")
         if self.app_env == "production" and self.jev_mode not in {"live", "disabled"}:
             raise ValueError("Production requires explicit live or disabled Jev mode")
-        if self.jev_mode is None:
-            self.jev_mode = "mock"
-        if self.jev_mode == "live":
+        if self.effective_jev_mode == "live":
             key = self.typesafe_api_key.get_secret_value() if self.typesafe_api_key else ""
             if (
                 not key
@@ -71,3 +81,8 @@ class Settings(BaseSettings):
             ):
                 raise ValueError("Live Jev mode requires a valid API key")
         return self
+
+    @property
+    def effective_jev_mode(self) -> JevMode:
+        """The configured Jev mode; offline development defaults to the mock adapter."""
+        return self.jev_mode or "mock"

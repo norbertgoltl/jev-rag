@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from jev_rag_api.core.config import ROOT_ENV_FILE, Settings
+from jev_rag_api.core.config import ROOT_ENV_FILE, Settings, find_env_file
 from settings_factory import build_settings
 
 
@@ -56,7 +56,7 @@ def test_origin_json_environment(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_dotenv_path_is_independent_of_working_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    assert ROOT_ENV_FILE.is_absolute()
+    assert ROOT_ENV_FILE is not None and ROOT_ENV_FILE.is_absolute()
     assert ROOT_ENV_FILE == Path(__file__).resolve().parents[3] / ".env"
     monkeypatch.chdir(tmp_path)
     assert Settings.model_config["env_file"] == ROOT_ENV_FILE
@@ -66,3 +66,18 @@ def test_settings_errors_do_not_include_input() -> None:
     with pytest.raises(ValidationError) as error:
         build_settings(_env_file=None, api_port="secret-value")
     assert "secret-value" not in str(error.value)
+
+
+def test_find_env_file_is_none_outside_a_source_checkout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("jev_rag_api.core.config.REPOSITORY_MARKER", "no-such-marker.yaml")
+    assert find_env_file() is None
+
+
+def test_unset_jev_mode_defaults_to_mock_without_mutating_settings() -> None:
+    config = build_settings()
+    assert config.jev_mode is None
+    assert config.effective_jev_mode == "mock"
+
+
+def test_explicit_jev_mode_is_effective() -> None:
+    assert build_settings(jev_mode="disabled").effective_jev_mode == "disabled"

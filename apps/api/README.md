@@ -36,7 +36,7 @@ uv run --project apps/api --managed-python --locked python -c 'import jev_rag_ap
 uv run --project apps/api --managed-python --locked jev-rag-api
 ```
 
-Az entrypoint a Settings `API_HOST` és `API_PORT` értékével indít Uvicornt, alapból `127.0.0.1:8000` címen, development módban reloaddal. Az importálható ASGI alkalmazás `jev_rag_api.main:app`, a factory `create_app(settings=..., readiness_probe=...)`.
+Az entrypoint a Settings `API_HOST` és `API_PORT` értékével indít Uvicornt, alapból `127.0.0.1:8000` címen, development módban reloaddal. Az alkalmazás factory-ja `jev_rag_api.main:create_app(settings=..., readiness_probe=..., decision_port=...)`; a Uvicorn `factory=True` móddal hívja, ezért import közben nem keletkezik alkalmazás és nem olvasódik be konfiguráció. A `.env` fájlt a repository gyökerében (`pnpm-workspace.yaml` mellett) keresi; telepített csomagként, forrás-checkout nélkül nem olvas dotenv fájlt. Ha a `JEV_MODE` nincs beállítva, a `Settings.effective_jev_mode` értéke `mock`, a `jev_mode` mező pedig érintetlen marad.
 
 | Végpont | Elvárt működés |
 | --- | --- |
