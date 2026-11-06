@@ -1,6 +1,17 @@
 # Foundation release report
 
-## Validation record
+## Current status
+
+**ACCEPTED, with one standing condition.** Details and evidence are in the re-validation section below.
+
+- Accepted commit: `15edbcd` on `main` (merge of PR #40). All four CI jobs passed on this commit (run 42202743787).
+- Release tag: `foundation-0.1.0` marks the commit that contains this status section, which differs from `15edbcd` only by this report.
+- Validated code: `ae20b27`. Later commits change documentation only: the release evidence, the English translation of the project documentation (PR #40) and the `AGENTS.md` rules.
+- Documentation language: all tracked markdown files are English. The web application's Hungarian UI texts and the HU/EN test fixture are intentional.
+- Standing condition: enforcement of the required checks (`backend`, `frontend`, `infrastructure`, `security`) holds only while the repository is public or on a plan that supports rulesets for private repositories.
+- The sections "Initial validation record" to "Initial decision" describe the first attempt of 2026-10-31 and are superseded.
+
+## Initial validation record (2026-10-31, superseded)
 
 - Release candidate: combined FND-024–026 working tree before merge; base `main` commit `9f9f31c`.
 - Validation date: 2026-10-31 (Europe/Budapest).
@@ -11,7 +22,7 @@
 - Qdrant: `qdrant/qdrant:v1.19.2`.
 - Docker: Docker 29.9.2, Compose 5.6.1, Linux ARM64 Engine (local).
 
-## Current results
+## Initial results (superseded)
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
@@ -54,9 +65,9 @@ This release candidate was validated in the current workspace and an isolated lo
 3. Verify secret scanning and push protection in repository settings if the plan and repository visibility make those features available.
 4. Record the post-merge and updated-branch workflow run links.
 
-## Final decision
+## Initial decision (superseded)
 
-**BLOCKED.** Local and isolated-clone quality, security, setup, infrastructure, and diagnostics checks passed. PR #23 has all four GitHub Actions jobs passing. Foundation release acceptance still requires the `security` check on the remaining PRs after PR #23 merges, adding it to the `main` required checks, and evidence that failed required checks block merging.
+**BLOCKED** at the time. Local and isolated-clone quality, security, setup, infrastructure, and diagnostics checks passed. PR #23 has all four GitHub Actions jobs passing. Foundation release acceptance still requires the `security` check on the remaining PRs after PR #23 merges, adding it to the `main` required checks, and evidence that failed required checks block merging.
 
 ## Re-validation after the code review (2026-11-05)
 
@@ -75,6 +86,8 @@ The Foundation changed after the first record above (strict mypy gate, Prettier 
 | `main` required checks include all four jobs | PASS while public; not applicable while private | While the repository was private the rulesets API returned HTTP 403. After the repository was made public the active ruleset `Protect main` required only `backend`, `frontend` and `infrastructure`; `security` was added on 2026-11-05. The ruleset now requires all four checks with up-to-date branches, pull requests, no deletion and no force push, and has no bypass actors. |
 | Failed or missing required check blocks merge | PASS while public; FAIL while private | After the repository returned to private, test PR #36 (same intentionally failing test, closed without merging, branch deleted) was reported as `mergeStateStatus: UNSTABLE` (`mergeable_state: unstable`), not `BLOCKED`: the failing `backend` check is not treated as required, so the ruleset is not enforced while the repository is private on the current plan. The rulesets API again returns HTTP 403. The public-state evidence follows. PR #28 had been merged while its `frontend` check was still queued, before enforcement was available. Test PR #33 contained one intentionally failing test: `backend` failed, the other three checks passed, and GitHub reported `mergeStateStatus: BLOCKED` (`mergeable_state: blocked`) for a non-draft PR. A merge was deliberately not attempted. The PR was closed without merging and its branch deleted. |
 | GitHub secret scanning and push protection | PASS while public; NOT VERIFIED while private | After the repository became public the API reports `secret_scanning` and `secret_scanning_push_protection` as `enabled`. While private the API again reports no `security_and_analysis` data. The Gitleaks history and working-tree scans in `make security-check` and the CI `security` job are unaffected. |
+| Documentation language | PASS | PR #40 translated the remaining 14 Hungarian markdown files to English. No Hungarian accented characters or common Hungarian words remain in any tracked markdown file, all relative links resolve, and `prettier --check` and `make security-check` passed. A stale statement about an importable default app was removed and the FND-018-020 test counts were dated. |
+| CI on the accepted commit | PASS | `main` at `15edbcd` (run 42202743787): `backend`, `frontend`, `infrastructure` and `security` succeeded. The diff between the validated code commit `ae20b27` and `15edbcd` contains documentation only. |
 
 ### Decision after re-validation
 
