@@ -1,56 +1,56 @@
 # ADR-001 – Qdrant vector store
 
-Állapot: elfogadott architektúradöntés. Kapcsolódó feladat: FND-004.
+Status: accepted architecture decision. Related task: FND-004.
 
-## Kontextus
+## Context
 
-A projekt lokálisan fejlesztett RAG-rendszer, amelynek elsődleges tárolási feladata dokumentumrészletek szemantikus visszakeresése és metaadatok szerinti szűrése. Jelenleg nincs meglévő PostgreSQL-adatbázis vagy jelentős relációs üzleti adatmodell.
+The project is a locally developed RAG system whose primary storage responsibility is semantic retrieval of document chunks and filtering by metadata. There is currently no existing PostgreSQL database or substantial relational business data model.
 
-## Döntés
+## Decision
 
-A vector store Qdrant, külön Docker Compose szolgáltatásként. Elérése kizárólag a backend providerfüggetlen VectorStorePortjának adapterén keresztül történik. A frontend és a későbbi agentek nem kapnak közvetlen adatbázis-hozzáférést.
+The vector store is Qdrant, running as a separate Docker Compose service. Access is exclusively through an adapter implementing the backend's provider-independent VectorStorePort. The frontend and future agents do not receive direct database access.
 
-## Mérlegelt alternatívák
+## Alternatives considered
 
-| Szempont | Qdrant | PostgreSQL + pgvector |
+| Aspect | Qdrant | PostgreSQL + pgvector |
 | --- | --- | --- |
-| Alapmodell | Dedikált vector kereső | Relációs adatbázis vector bővítéssel |
-| Szűrés | Payload és payloadindexek | SQL és relációs indexek |
-| Későbbi hybrid retrieval | Dense/sparse kombináció | Vector és full-text kombináció |
-| Üzleti adatok és tranzakciók | Külön autoritatív adatbázis lehet szükséges | Ugyanabban a relációs adatbázisban kezelhetők |
-| Projektbeli következmény | Közvetlenül illeszkedik a retrieval feladathoz | Jelenleg kihasználatlan relációs infrastruktúrát vezetne be |
+| Base model | Dedicated vector search engine | Relational database with a vector extension |
+| Filtering | Payload and payload indexes | SQL and relational indexes |
+| Future hybrid retrieval | Dense/sparse combination | Vector and full-text combination |
+| Business data and transactions | May require a separate authoritative database | Can be handled in the same relational database |
+| Project implications | Directly fits the retrieval task | Would introduce relational infrastructure that is currently unused |
 
-A Qdrantot a retrieval-központú scope és a payload-alapú szűrés indokolja. Ez nem méréssel igazolt teljesítményelőny a pgvectorral szemben. PostgreSQL később bevezethető felhasználók, dokumentum-életciklus, jobállapotok vagy beszélgetések autoritatív tárolására, a vector index cseréje nélkül.
+Qdrant is justified by the retrieval-focused scope and payload-based filtering. This is not a measured performance advantage over pgvector. PostgreSQL can be introduced later for authoritative storage of users, document lifecycles, job states, or conversations without replacing the vector index.
 
-## Kötelező üzemeltetési feltételek
+## Required operating conditions
 
-| Terület | Követelmény | Implementáció |
+| Area | Requirement | Implementation |
 | --- | --- | --- |
-| Futtatás | Docker Compose, hoston futó API és web mellett | FND-015 |
-| Hálózat | HTTP-kötés `127.0.0.1:6333:6333`, LAN felé nincs publikálás | FND-015 |
-| További portok | gRPC és cluster port nem publikált a hoston | FND-015 |
-| Image | Ellenőrzött, konkrét verzió, nem `latest` | FND-015 |
-| Tárolás | Docker named volume a `/qdrant/storage` útvonalon | FND-016 |
-| Adatmegőrzés | Restart és normál leállítás/újraindítás megőrzi az adatot, volume-törlés csak explicit adatvesztési művelet | FND-016 |
-| Readiness | Határolt kapcsolatteszt a backend adapterből, elérhetetlenségre 503 | FND-017 |
-| Production | Hitelesítés, TLS, hálózati védelem, snapshot- és visszaállítási stratégia | Élesítés előtt külön feladat |
+| Execution | Docker Compose alongside the host-based API and web application | FND-015 |
+| Network | HTTP binding `127.0.0.1:6333:6333`, no LAN exposure | FND-015 |
+| Additional ports | gRPC and cluster ports are not published on the host | FND-015 |
+| Image | Verified, specific version, not `latest` | FND-015 |
+| Storage | Docker named volume at `/qdrant/storage` | FND-016 |
+| Data retention | Restart and normal shutdown/startup preserve data, volume deletion is an explicit data-loss operation only | FND-016 |
+| Readiness | Bounded connectivity check through the backend adapter, 503 when unavailable | FND-017 |
+| Production | Authentication, TLS, network protection, snapshot and restore strategy | Separate task before production deployment |
 
-A [Qdrant quickstart](https://qdrant.tech/documentation/quickstart/) figyelmeztet arra, hogy alapkonfigurációban nincs hitelesítés vagy titkosítás. Ezért a loopback bind kötelező, a lokális konfiguráció önmagában nem production telepítés.
+The [Qdrant quickstart](https://qdrant.tech/documentation/quickstart/) warns that the default configuration has no authentication or encryption. A loopback binding is therefore mandatory. The local configuration alone is not a production deployment.
 
-## Adatkezelési következmények
+## Data management implications
 
-A Qdrant újraépíthető keresési index. Az eredeti dokumentumokat és a feldolgozási konfigurációt külön meg kell őrizni. Dokumentumvesztésből nem állítható helyre megbízhatóan az eredeti tartalom pusztán a vector index alapján.
+Qdrant is a rebuildable search index. Original documents and processing configuration must be preserved separately. If documents are lost, their original content cannot be reliably recovered from the vector index alone.
 
-A collection neve, vektordimenzió, távolságmetrika és embeddingmodell a RAG Core döntése. Foundationben nem készül előre üzleti collection. Az infrastruktúra perzisztenciatesztje használhat elkülönített, szintetikus tesztcollectiont.
+The collection name, vector dimension, distance metric, and embedding model are RAG Core decisions. Foundation does not pre-create a business collection. Infrastructure persistence tests may use an isolated, synthetic test collection.
 
-A RAG Core indexterve a tényleges szűrési minták alapján jelöli ki a payloadindexeket, lehetőleg az adatbetöltés előtt, a [Qdrant indexelési útmutatója](https://qdrant.tech/documentation/manage-data/indexing/) szerint. A későbbi `access_scope` filter nem helyettesíti az alkalmazásoldali autorizációt.
+The RAG Core index design selects payload indexes based on actual filtering patterns, preferably before loading data, following the [Qdrant indexing guide](https://qdrant.tech/documentation/manage-data/indexing/). The future `access_scope` filter does not replace application-side authorization.
 
-## Újravizsgálat
+## Reconsideration
 
-A döntés akkor vizsgálandó újra, ha a relációs igény dominánssá válik, a két tároló üzemeltetési költsége problémát okoz, mért keresési hiányosság jelentkezik, vagy a tranzakcionális konzisztencia szorosabb összekapcsolást követel. Technológiai preferencia önmagában nem indok migrációra.
+Revisit the decision if relational requirements become dominant, the operating cost of two stores becomes a problem, measured retrieval deficiencies emerge, or transactional consistency requires tighter integration. Technology preference alone is not a reason to migrate.
 
-## Elfogadás
+## Acceptance
 
-Az FND-004 teljesült: a választás, alternatíva, következmények és újravizsgálati feltételek rögzítettek. A Compose, a volume és a kapcsolatteszt megvalósítása FND-015–017, nem az ADR elkészültének része.
+FND-004 is complete: the choice, alternative, implications, and reconsideration conditions are recorded. Compose, volume, and connectivity test implementation belong to FND-015–017 and are not part of completing this ADR.
 
-Kapcsolódó dokumentumok: [scope](../foundation/scope.md), [architektúra](../architecture/system-architecture.md), [interfészek](../architecture/interface-contracts.md).
+Related documents: [scope](../foundation/scope.md), [architecture](../architecture/system-architecture.md), [interfaces](../architecture/interface-contracts.md).

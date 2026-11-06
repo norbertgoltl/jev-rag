@@ -1,8 +1,8 @@
-# FND-002 – Rendszerarchitektúra
+# FND-002 – System architecture
 
-Állapot: rögzített döntés. Minta: moduláris monolit, port/adapter határokkal.
+Status: recorded decision. Pattern: modular monolith with port/adapter boundaries.
 
-## Komponensek és futtatás
+## Components and execution
 
 ```mermaid
 flowchart TD
@@ -20,55 +20,55 @@ flowchart TD
     Agent["Future agent orchestration"] -.-> App
 ```
 
-A diagram logikai célarchitektúra. Egyetlen backend koordinálja a folyamatokat, nincs külön API gateway, service discovery, üzenetsor vagy elosztott tranzakció.
+The diagram shows the logical target architecture. A single backend coordinates workflows, without a separate API gateway, service discovery, message queue, or distributed transaction.
 
-| Futtatási hely | Komponens | Követelmény |
+| Execution location | Component | Requirement |
 | --- | --- | --- |
-| Host | Python + uv + FastAPI | Projektlokális virtuális környezet, `127.0.0.1:8000` |
-| Host | Node.js LTS + pnpm + Next.js | Projektfüggőségek, `127.0.0.1:3000` |
-| Docker Compose | Qdrant | Konkrét image-verzió, `127.0.0.1:6333:6333`, named volume |
-| Külső szolgáltatás | Jev / TypeSafe | Kizárólag backend adapterből, aszinkron hívások |
+| Host | Python + uv + FastAPI | Project-local virtual environment, `127.0.0.1:8000` |
+| Host | Node.js LTS + pnpm + Next.js | Project dependencies, `127.0.0.1:3000` |
+| Docker Compose | Qdrant | Specific image version, `127.0.0.1:6333:6333`, named volume |
+| External service | Jev / TypeSafe | Exclusively through the backend adapter, asynchronous calls |
 
-A kiinduló terv Python `3.14.8`-at jelöl. A runtime tényleges elérhetőségét és a csomagkompatibilitást az FND-008 inicializálásakor ellenőrizni kell. Ez a dokumentum nem igazol telepített vagy tesztelt runtime-ot. A Node.js/pnpm, a Python-csomagok és a Qdrant image konkrét verziópinjeit az illetékes inicializálási feladat rögzíti, `latest` és lebegő SDK-modellalias nélkül.
+The initial plan specifies Python `3.14.8`. Runtime availability and package compatibility must be verified when initializing FND-008. This document does not establish that a runtime is installed or tested. The relevant initialization task records specific version pins for Node.js/pnpm, Python packages, and the Qdrant image, without `latest` or floating SDK model aliases.
 
-## Rétegek és függőségi irány
+## Layers and dependency direction
 
-| Réteg | Felelősség | Megengedett függőség |
+| Layer | Responsibility | Allowed dependencies |
 | --- | --- | --- |
-| Next.js | Megjelenítés, interakció, backend-diagnosztika | Backend HTTP-contract |
-| API | Routing, request/response validáció, HTTP-hibák, request ID | Application, belső típusok |
-| Application | Use case-ek, workflow, determinisztikus policy | Domain és portok |
-| Domain / Ports | Providerfüggetlen típusok, interfészek és hibák | Saját típusok, SDK nélkül |
-| Infrastructure / Adapters | Jev, Qdrant és későbbi szolgáltatók elérése | Domain/portok és az adott SDK |
-| Composition root | Konfiguráció, adapterválasztás, dependency injection és lifespan | A fenti rétegek összekötése |
+| Next.js | Presentation, interaction, backend diagnostics | Backend HTTP contract |
+| API | Routing, request/response validation, HTTP errors, request ID | Application, internal types |
+| Application | Use cases, workflow, deterministic policy | Domain and ports |
+| Domain / Ports | Provider-independent types, interfaces, and errors | Own types, no SDKs |
+| Infrastructure / Adapters | Access to Jev, Qdrant, and future providers | Domain/ports and the relevant SDK |
+| Composition root | Configuration, adapter selection, dependency injection, and lifespan | Wiring the layers above |
 
-A tervezett backendmodulok helye: `apps/api/src/jev_rag/{api,application,domain,ports,adapters,core}`. Ezek célhelyek, létrehozásuk a backendfeladatok része. Az application nem importál infrastruktúra SDK-t. Az adapter nem hoz workflow-döntést. A composition root a portokon keresztül adja át az adaptereket.
+Planned backend module location: `apps/api/src/jev_rag/{api,application,domain,ports,adapters,core}`. These are target locations, to be created by the backend tasks. The application does not import infrastructure SDKs. Adapters do not make workflow decisions. The composition root supplies adapters through ports.
 
-A frontend nem kap TypeSafe API-kulcsot vagy közvetlen Qdrant-hozzáférést. A későbbi Next.js szerveroldali API-kliens is a FastAPI-t hívja. A frontend szerveroldali rétege nem válik második orchestration réteggé.
+The frontend receives neither a TypeSafe API key nor direct Qdrant access. The future Next.js server-side API client also calls FastAPI. The frontend server-side layer does not become a second orchestration layer.
 
-## A döntés, retrieval és generálás szerepe
+## Roles of decisions, retrieval, and generation
 
-| Komponens | Szerep |
+| Component | Role |
 | --- | --- |
-| Jev | Strukturált döntési bemenet routinghoz, osztályozáshoz és relevanciaértékeléshez |
-| Qdrant | Dokumentumrészletek szemantikus visszakeresése |
-| Generatív LLM | Természetes nyelvű válasz előállítása a kapott forrásokból |
-| FastAPI application | Jogosultság, policy, lépések koordinálása és végrehajtás |
+| Jev | Structured decision input for routing, classification, and relevance evaluation |
+| Qdrant | Semantic retrieval of document chunks |
+| Generative LLM | Produce natural-language answers from supplied sources |
+| FastAPI application | Authorization, policy, coordination of steps, and execution |
 
-A Jev Choice, Score és Noul eredményei az alkalmazáskód által feldolgozható döntési adatok. Ezt a szerepet a [TypeSafe bevezetője](https://docs.typesafe.ai/introduction) is elkülöníti a szöveggenerálástól. Egy modellválasz önmagában nem ad végrehajtási jogosultságot.
+Jev Choice, Score, and Noul results are decision data that application code can process. The [TypeSafe introduction](https://docs.typesafe.ai/introduction) also distinguishes this role from text generation. A model response alone does not grant execution permission.
 
-A későbbi RAG-folyamatban az ingestion embeddinget és indexbejegyzéseket készít, a kérdés-válasz use case retrievalt, szükség esetén Jev-értékelést és generálást koordinál. Ezek az FND-001–004-ben kizárólag felelősségi határok. Konkrét embeddingmodell, generatív LLM és agent framework még nincs kiválasztva.
+In the future RAG workflow, ingestion produces embeddings and index entries. The question-answering use case coordinates retrieval, Jev evaluation when needed, and generation. FND-001–004 define only responsibility boundaries for these capabilities. No specific embedding model, generative LLM, or agent framework has been selected yet.
 
-## Életciklus, hibák és biztonsági határok
+## Lifecycle, errors, and security boundaries
 
-A backend a konfigurációt induláskor validálja, workerfolyamatonként újrafelhasználja az aszinkron klienseket, leállításkor lezárja őket. Mock módban a Jev-kliens nem inicializálódik. Live módban a hiányzó hitelesítő adat konfigurációs hiba, a rendszer nem válthat csendben mockra.
+The backend validates configuration at startup, reuses asynchronous clients per worker process, and closes them at shutdown. The Jev client is not initialized in mock mode. Missing credentials in live mode are a configuration error. The system must not silently switch to mock mode.
 
-A liveness csak a backend folyamatot ellenőrzi. A readiness a kötelező Qdrant-kapcsolatot vizsgálja határolt időn belül, Jev-kiesés önmagában nem teszi sikertelenné. A konkrét HTTP-válaszokat az [interfészszerződés](interface-contracts.md) rögzíti.
+Liveness checks only the backend process. Readiness checks the required Qdrant connection within a bounded time. A Jev outage alone does not cause readiness to fail. The [interface contract](interface-contracts.md) defines the exact HTTP responses.
 
-A publikus diagnosztika nem tartalmaz kulcsot, connection stringet vagy stack trace-t. A strukturált logok request ID-val korrelálhatók, nyers state, felhasználói tartalom és provider response body nélkül. A többfelhasználós rendszerben az autorizáció az application feladata, a vector store filtere csak végrehajtja az ellenőrzött hatókört.
+Public diagnostics contain no keys, connection strings, or stack traces. Structured logs can be correlated by request ID and contain no raw state, user content, or provider response body. In a multi-user system, authorization is the application's responsibility. The vector store filter only enforces the verified scope.
 
-Jövőbeli agent csak application use case-en keresztül kap eszközhozzáférést, azonos validációval, jogosultsággal és policyval. Agent orchestration nem kerül SDK-adapterbe. Production skálázás és rendelkezésre állás külön döntést igényel.
+Future agents receive tool access only through application use cases, with the same validation, authorization, and policy. Agent orchestration does not belong in SDK adapters. Production scaling and availability require a separate decision.
 
-## Elfogadás
+## Acceptance
 
-Az FND-002 teljesült: a komponensek, felelősségek, függőségi irányok, futtatási helyek és későbbi bővítési határok rögzítettek. A kapcsolódó tárolási döntés az [ADR-001](../adr/ADR-001-vector-store.md), a fázishatár a [Foundation scope](../foundation/scope.md).
+FND-002 is complete: components, responsibilities, dependency directions, execution locations, and future extension boundaries are recorded. The related storage decision is [ADR-001](../adr/ADR-001-vector-store.md), and phase boundaries are defined in the [Foundation scope](../foundation/scope.md).

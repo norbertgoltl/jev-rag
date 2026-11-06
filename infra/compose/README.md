@@ -1,7 +1,7 @@
 # Infrastructure workspace
 
-Az FND-015–017 itt hozza létre a Qdrant Compose-konfigurációját, named volume-ját és kapcsolattesztjét. Jelenleg nincs indítható infrastruktúra.
+FND-015–017 implemented the Qdrant configuration in [`../compose.yaml`](../compose.yaml), its named volume, and connectivity and persistence checks in [`../../scripts/infrastructure.py`](../../scripts/infrastructure.py). Run `make up`, `make health`, `make status`, and `make down` from the repository root. `make infra-test` runs the isolated infrastructure acceptance test.
 
-A Qdrant csak `127.0.0.1:6333` címen publikálható. A normál leállítás megőrzi a volume-ot. A FastAPI és a Next.js a hoston fut, nem kap alkalmazáskonténert.
+Qdrant may only be published at `127.0.0.1:6333`. Normal shutdown preserves the volume. FastAPI and Next.js run on the host and do not receive application containers.
 
-A későbbi Compose-parancsok explicit `--env-file` és `--file` útvonalat használnak a repository gyökeréhez képest. A `.env` nem shell script.
+The infrastructure CLI runs Compose from the repository root with explicit `--env-file .env -f infra/compose.yaml` paths. It reads `.env` with a dotenv parser and never executes it as a shell script. Prerequisites, configuration, and data retention rules are documented in the [infrastructure guide](../../docs/development/infrastructure.md).
