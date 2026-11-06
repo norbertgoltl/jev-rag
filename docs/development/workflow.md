@@ -1,48 +1,48 @@
-# Fejlesztői környezet és workflow
+# Development environment and workflow
 
-## Támogatott környezet
+## Supported environment
 
-Elsődleges környezet: macOS Apple Silicon. A parancsok POSIX shellre és GNU/BSD Make szintaxisra épülnek, Linux/WSL alatt is használhatók. A jelenlegi valódi futtatási ellenőrzés macOS-en, GNU Make 3.81-gyel történt. A BSD make verziófelismerését szimulált smoke teszt ellenőrzi, valódi BSD make futtatás még nem történt.
+The primary environment is macOS Apple Silicon. Commands use POSIX shell and GNU/BSD Make syntax and can also be used on Linux/WSL. Actual execution has currently been verified on macOS with GNU Make 3.81. BSD make version detection is covered by a simulated smoke test. Actual BSD make execution has not yet been performed.
 
-| Eszköz | Követelmény | Verzióforrás |
+| Tool | Requirement | Version source |
 | --- | --- | --- |
-| Git | Elérhető CLI | A `doctor` kiírja a verziót |
-| Make | GNU Make vagy BSD make | A `doctor` kiírja a verziót |
-| uv | Python-projektkezelő | A `doctor` kiírja a verziót |
-| Python | uv-managed `3.14.8`, telepítve és ellenőrizve | FND-008-tól `apps/api/.python-version` |
-| Node.js | `24.22.1`, a kijelölt 24 LTS ágból | Root `.node-version` és `package.json` |
+| Git | Available CLI | `doctor` prints the version |
+| Make | GNU Make or BSD make | `doctor` prints the version |
+| uv | Python project manager | `doctor` prints the version |
+| Python | uv-managed `3.14.8`, installed and verified | `apps/api/.python-version` from FND-008 |
+| Node.js | `24.22.1`, from the designated 24 LTS branch | Root `.node-version` and `package.json` |
 | pnpm | `12.15.0` | Root `package.json` `packageManager` |
-| Corepack | Bootstraplehetőség, meglévő megfelelő pnpm mellett opcionális | A `doctor` kiírja, ha elérhető |
-| Docker + Compose | Elérhető CLI és Compose plugin | A `doctor` kiírja a verziót |
+| Corepack | Bootstrap option, optional when a suitable pnpm is already available | `doctor` reports it when available |
+| Docker + Compose | Available CLI and Compose plugin | `doctor` prints the version |
 
-A Node.js- és pnpm-pinek a jelenleg telepített, ellenőrzött verziókat rögzítik. Frissítéskor a kapcsolódó verzióforrásokat együtt kell módosítani és újraellenőrizni.
+Node.js and pnpm pins record the currently installed and verified versions. Updates must change and revalidate the related version sources together.
 
-A Node.js-et felhasználói verziókezelővel válaszd ki a `.node-version` alapján. A pnpm-et a `packageManager` pin szerint biztosítsd. A rendelkezésre álló Corepack használható bootstraphez, de a `doctor` nem aktivál shim-et, nem tölt le csomagkezelőt és nem telepít globális csomagot. Ha nincs helyben a rögzített pnpm, hibát ad.
+Select Node.js with a user-level version manager based on `.node-version`. Provide pnpm according to the `packageManager` pin. Available Corepack can be used for bootstrapping, but `doctor` does not activate shims, download a package manager, or install global packages. It fails if the pinned pnpm is not available locally.
 
-Hivatalos háttér: [Node.js kiadások](https://nodejs.org/en/about/previous-releases), [pnpm telepítés](https://pnpm.io/installation), [pnpm workspace](https://pnpm.io/workspaces), [uv telepítés](https://docs.astral.sh/uv/getting-started/installation/).
+Official references: [Node.js releases](https://nodejs.org/en/about/previous-releases), [pnpm installation](https://pnpm.io/installation), [pnpm workspace](https://pnpm.io/workspaces), [uv installation](https://docs.astral.sh/uv/getting-started/installation/).
 
-## Projektgyökerek és lockfile-ok
+## Project roots and lockfiles
 
-| Útvonal | Felelősség |
+| Path | Responsibility |
 | --- | --- |
-| `apps/api/` | Egyetlen Python-projekt, saját `pyproject.toml`, `uv.lock` és `.venv`, FND-008-tól |
-| `apps/web/` | Next.js és saját `package.json`, FND-012-től |
-| `package.json` | Privát workspace-koordinátor, runtime- és package manager pin, alkalmazásfüggőség nélkül |
-| `pnpm-workspace.yaml` | Kizárólag `apps/web`, közös root lockfile-lal |
-| `infra/compose.yaml` | Docker-infrastruktúra, FND-015–017-től |
-| `docs/foundation/` | Foundation acceptance checklist és tényleges release-validáció |
-| `scripts/` | Fejlesztői CLI és offline smoke tesztek |
-| `docs/architecture/`, `docs/adr/`, `docs/foundation/` | Architektúra, döntések, fázishatárok |
-| `docs/development/` | Setup és fejlesztési workflow |
-| `.github/` | PR-sablon és GitHub Actions CI |
+| `apps/api/` | Single Python project with its own `pyproject.toml`, `uv.lock`, and `.venv`, from FND-008 |
+| `apps/web/` | Next.js with its own `package.json`, from FND-012 |
+| `package.json` | Private workspace coordinator, runtime and package manager pins, no application dependencies |
+| `pnpm-workspace.yaml` | Only `apps/web`, with a shared root lockfile |
+| `infra/compose.yaml` | Docker infrastructure, from FND-015–017 |
+| `docs/foundation/` | Foundation acceptance checklist and actual release validation |
+| `scripts/` | Developer CLI and offline smoke tests |
+| `docs/architecture/`, `docs/adr/`, `docs/foundation/` | Architecture, decisions, phase boundaries |
+| `docs/development/` | Setup and development workflow |
+| `.github/` | PR template and GitHub Actions CI |
 
-Nincs root Python-projekt, uv workspace, frontend saját lockfile vagy előre létrehozott shared/agent/embedding csomag. Az alkalmazásgyökereket jelenleg a saját README-jük tartja fenn, üres `.gitkeep` nélkül.
+There is no root Python project, uv workspace, separate frontend lockfile, or pre-created shared/agent/embedding package. Application roots are currently maintained by their own READMEs, without empty `.gitkeep` files.
 
-Az `apps/api/uv.lock` az FND-008 során elkészült, a root `pnpm-lock.yaml` az FND-012 feladata. A későbbi lockfile-ok és runtime-pinek verziókezelendők. A setup nem generálhat hiányzó lockfile-t, és nem oldhat fel új verziókat.
+`apps/api/uv.lock` was created during FND-008, and the root `pnpm-lock.yaml` during FND-012. Both lockfiles and the runtime pins are version-controlled. Setup must not generate missing lockfiles or resolve new versions.
 
-## Jelenleg futtatható parancsok
+## Currently runnable commands
 
-A repository gyökeréből:
+Run from the repository root:
 
 ```sh
 make help
@@ -50,70 +50,71 @@ make doctor
 make smoke
 ```
 
-A `help` a teljes stabil parancsfelületet mutatja. A `doctor` összegyűjti a diagnosztikát, hiányzó vagy eltérő eszköz esetén nem nulla kóddal lép ki. Nem vizsgál daemon- vagy szolgáltatáskészenlétet, nem módosít konfigurációt. A Python-keresés offline, kizárólag már telepített uv-managed interpreterek között történik.
+`help` shows the complete stable command interface. `doctor` collects diagnostics and exits with a non-zero code if a tool is missing or differs from the required version. It also checks Docker context and Engine availability, native architecture, Compose configuration, minimum CPU and memory resources, and host port ownership. It requires the root `.env` and an installed backend environment, but does not check application or Qdrant HTTP readiness or change configuration. Python discovery is offline and limited to already installed uv-managed interpreters.
 
-A pnpm automatikus package manager feloldását a `pmOnFail: ignore` kikapcsolja, a verzióegyezést a CLI külön ellenőrzi. A diagnosztika a Corepack projektalapú váltását és hálózati hozzáférését is letiltja a verziólekérdezésre. Így az ellenőrzés nem generál pnpm boot-lockfile-t és nem tölti le a hiányzó verziót. A viselkedést a [pnpm CLI-beállításai](https://pnpm.io/settings/cli#pmonfail) írják le.
+Automatic pnpm package manager resolution is disabled by `pmOnFail: ignore`. The CLI checks version matching separately. For version queries, diagnostics also disable Corepack's project-based switching and network access. This prevents the check from generating a pnpm boot lockfile or downloading a missing version. The behavior is described in the [pnpm CLI settings](https://pnpm.io/settings/cli#pmonfail).
 
-A `smoke` külső API, Docker daemon és telepített alkalmazásfüggőségek nélkül fut, ideiglenes másolatban és szimulált eszközökkel. Ellenőrzi a diagnosztika sikeres és hibás eseteit, az el nem készült targetek hibáját, a setup delegálását és hibaterjedését, a szóközös útvonalakat és azt, hogy a `.env` tartalma nem fut le. Az ideiglenes fájlokat eltávolítja, a valódi workspace-eket nem inicializálja.
+`smoke` runs without external APIs, a Docker daemon, or installed application dependencies, using a temporary copy and simulated tools. It checks successful and failed diagnostics, errors from unimplemented targets, setup delegation and error propagation, paths containing spaces, and that `.env` content is not executed. It removes temporary files and does not initialize the real workspaces.
 
-Más könyvtárból `make -C /absolute/path/to/jev-rag help` használható. A shell belépési pontok is saját fájlhelyükhöz képest oldják fel a repository gyökerét.
+From another directory, use `make -C /absolute/path/to/jev-rag help`. Shell entrypoints also resolve the repository root relative to their own file locations.
 
-## Későbbi alrendszereket igénylő parancsok
+## Application and infrastructure commands
 
-| Parancs | Delegálás vagy jelenlegi akadály |
+| Command | Behavior |
 | --- | --- |
-| `make setup` | Előbb ellenőrzi mindkét workspace manifestjét, az API Python-pinjét és mindkét lockfile-t. Ezután `uv sync --project apps/api --managed-python --locked`, majd root `pnpm install --frozen-lockfile`. A frontend manifestje és a gyökérszintű lockfile elkészült. |
-| `make up` | Qdrant indítása, legfeljebb 90 másodperces health várakozással. |
-| `make down` | Projekt leállítása a volume és a host appok megőrzésével. |
-| `make status`, `make logs` | Projekt Qdrant állapota és követhető logjai. |
-| `make dev-api` | Hoston futó FastAPI indítása, uv-környezetben, alapértelmezetten loopback címen. |
-| `make dev-web` | A @jev-rag/web dev parancsát hívja, 127.0.0.1:3000 címen. |
-| `make lint`, `make format`, `make typecheck` | Backend és frontend quality gate-ek, lásd a [tesztelési útmutatót](testing.md). |
-| `make check` | Lint, format-check, typecheck, offline teszt coverage-dzsel és frontend production build. |
+| `make setup` | First checks both workspace manifests, the API Python pin, and both lockfiles. Then runs `uv sync --project apps/api --managed-python --locked`, followed by root `pnpm install --frozen-lockfile`. The frontend manifest and root lockfile are complete. |
+| `make up` | Starts Qdrant, waiting up to 90 seconds for health. |
+| `make down` | Stops the project while preserving the volume and host apps. |
+| `make status`, `make logs` | Project Qdrant status and log following. |
+| `make dev-api` | Starts host-based FastAPI in the uv environment, on a loopback address by default. |
+| `make dev-web` | Calls the @jev-rag/web dev command at 127.0.0.1:3000. |
+| `make lint`, `make typecheck` | Backend and frontend quality checks, see the [testing guide](testing.md). |
+| `make format`, `make format-frontend` | Explicitly format backend or frontend sources, respectively. |
+| `make check` | Lint, format-check, typecheck, offline tests with coverage, and frontend production build. |
 
-Minden hiányzó alrendszerhez érthető, nem nulla kilépési kód tartozik. A setup az első telepítési hiba után leáll, nem futtatja a következő csomagkezelőt. A két csomagkezelő telepítése nem közös tranzakció, a sikeres első lépést a második hibája nem vonja vissza. Ismételt setup ugyanazokat a rögzített függőségeket szinkronizálja. A GitHub Actions négy külön jobban futtatja a backend, frontend, infrastruktúra és security ellenőrzést, lásd a [CI-útmutatót](ci.md).
+Every missing subsystem produces a clear error and a non-zero exit code. Setup stops after the first installation failure and does not run the next package manager. Installation through the two package managers is not a shared transaction. Failure of the second step does not roll back a successful first step. Repeated setup synchronizes the same locked dependencies. GitHub Actions runs backend, frontend, infrastructure, and security checks in four separate jobs, see the [CI guide](ci.md).
 
-A későbbi infrastruktúra-implementáció ellenőrzi a Docker daemon elérhetőségét és a portütközést. Normál leállítás soha nem használhat volume-törlést. A FastAPI és Next.js nem kerül Dockerbe.
+The infrastructure CLI checks Docker daemon availability and port conflicts before startup. Normal shutdown preserves volumes. FastAPI and Next.js run on the host. See the [infrastructure guide](infrastructure.md) for lifecycle commands and isolated acceptance testing.
 
-## Konfiguráció és hostizoláció
+## Configuration and host isolation
 
-A root [.env.example](../../.env.example) secret nélküli backend/infra minta. Szükség esetén másold `.env` névre. Jelenleg a CLI nem tölti be, és nem is hajtja végre. Az app- és infrastruktúra-feladatok később explicit abszolút útvonalon adják át a saját dotenv/Compose betöltőjüknek. Nem függhetnek az indítási munkakönyvtártól.
+The root [.env.example](../../.env.example) is a backend/infrastructure template without secrets. Copy it to `.env` if needed, without overwriting an existing file. Backend Settings locates the repository-root `.env` from the source file location. The infrastructure CLI reads it with a dotenv parser, with process environment values taking precedence, and runs Compose from the repository root with explicit `--env-file .env -f infra/compose.yaml` paths. Neither loader executes `.env` as shell code, and path resolution does not depend on the caller's working directory.
 
-A frontend `.env.local.example` mintája az FND-012–014 során készül el, a lokális változat `apps/web/.env.local`. API-kulcs nem kerülhet frontendkódba vagy publikus változóba. Mock módban TypeSafe-kulcs nem szükséges, live mód hiányzó kulccsal hibázik.
+The frontend template is [`apps/web/.env.local.example`](../../apps/web/.env.local.example), with the local version at `apps/web/.env.local`. API keys must not enter frontend code or public variables. Mock mode does not require a TypeSafe key. Live mode fails without a key.
 
-Python-csomag csak a projekt `.venv` környezetébe, frontendfüggőség csak pnpm által kezelt projektkönyvtárba kerülhet. Rendszer-Python, rendszer-Node vagy globális projektspecifikus npm/pip csomag nem módosítható. A uv interpretertára és a pnpm cache lehet felhasználói szintű.
+Python packages may be installed only in the project's `.venv`, and frontend dependencies only in a pnpm-managed project directory. System Python, system Node, and global project-specific npm/pip packages must not be modified. The uv interpreter store and pnpm cache may be user-level.
 
-## Git és szerkesztési szabályok
+## Git and editing rules
 
-Rövid életű branchek a `main` fölött, review és squash merge. Új feladatnál `feature/fnd-XXX-description`, hibajavításnál `fix/fnd-XXX-description` név használható. A commitüzenet Conventional Commits formátumú, angolul, például:
+Use short-lived branches from `main`, review, and squash merge. New tasks may use `feature/fnd-XXX-description`, and fixes may use `fix/fnd-XXX-description`. Commit messages use Conventional Commits in English, for example:
 
 ```text
 chore(repo): initialize monorepo development tooling
 ```
 
-Commitüzenethez co-author nem adható. A [PR-sablon](../../.github/pull_request_template.md) rögzíti a minőségellenőrzéseket.
+Do not add a co-author to commit messages. The [PR template](../../.github/pull_request_template.md) records quality checks.
 
-Az EditorConfig UTF-8-at, LF-et, végső újsort, Pythonhoz és shellhez 4, TypeScript/JSON/YAML-hez 2 szóközt, Makefile-hoz tabot ír elő. A Git attributes normalizálja a szövegeket és binárisként kezeli a kijelölt médiatípusokat.
+EditorConfig requires UTF-8, LF, a final newline, 4 spaces for Python and shell, 2 spaces for TypeScript/JSON/YAML, and tabs for Makefiles. Git attributes normalize text and treat designated media types as binary.
 
-A `.gitignore` kizárja a secret fájlokat, környezeteket, függőségeket, buildet és cache-t. A `.env.example`, `.env.local.example` és hasonló minták kivételek. Ez nem akadályozza meg a titkok explicit hozzáadását; a titokellenőrzés részletei a [security baseline](security.md) dokumentumban vannak.
+`.gitignore` excludes secret files, environments, dependencies, builds, and caches. `.env.example`, `.env.local.example`, and similar templates are exceptions. This does not prevent explicit addition of secrets. Secret-checking details are documented in the [security baseline](security.md).
 
-Commit előtt `git status --short`, `git diff --check` és `make smoke` futtatandó, a `doctor` eltéréseit is rögzíteni kell. Új fájloknál a diff mellett a fájlok tartalmát is át kell nézni, mert a `git diff` önmagában nem mutatja az untracked fájlokat. Ellenőrizendő, hogy nincs secret, `.venv`, `node_modules` vagy generált adat a változások között.
+Before committing, run `git status --short`, `git diff --check`, and `make smoke`, and record any `doctor` discrepancies. Review the contents of new files alongside the diff, because `git diff` alone does not show untracked files. Verify that changes contain no secrets, `.venv`, `node_modules`, or generated data.
 
-## FND-005–007 ellenőrzési állapot
+## FND-005–007 validation status
 
-A struktúra, workspace-metaadatok, Git/editor szabályok, PR-sablon, CLI és smoke tesztek elkészültek. A `make help` és a `make smoke` sikeres. A Python-környezet javítása után a valódi `make doctor` is sikeresen lefutott, 0 kilépési kóddal. Az uv-managed Python `3.14.8`, Node.js `24.22.1`, pnpm `12.15.0`, Git, Make, uv, Corepack és Docker Compose ellenőrzése megfelelő. A diagnosztika nem telepített vagy módosított eszközt, alkalmazás- és infrastruktúra-készenlétet nem vizsgál. Az aktuális release-validáció státuszait a [Foundation release report](../foundation/release-report.md) rögzíti.
+The structure, workspace metadata, Git/editor rules, PR template, CLI, and smoke tests are complete. `make help` and `make smoke` passed. After fixing the Python environment, the real `make doctor` also passed with exit code 0. Checks for uv-managed Python `3.14.8`, Node.js `24.22.1`, pnpm `12.15.0`, Git, Make, uv, Corepack, and Docker Compose succeeded. Diagnostics did not install or modify tools and do not check application or infrastructure readiness. The [Foundation release report](../foundation/release-report.md) records current release validation statuses.
 
-Az alkalmazás quality gate parancsai: `make lint`, `make format-check`, `make typecheck`, `make test` és `make check`. Részletek: [tesztelés](testing.md), [CI](ci.md).
+Application quality gate commands: `make lint`, `make format-check`, `make typecheck`, `make test`, and `make check`. Details: [testing](testing.md), [CI](ci.md).
 
-## FND-008–011 ellenőrzési állapot
+## FND-008–011 validation status
 
-Elkészült a backend, a típusos konfiguráció, a hibakezelés és a JSON logging. A valódi uv.lock alapján a projekt települt. A 36 backendteszt, a lockfile-ellenőrzés, a wheel/sdist build, az élő host HTTP smoke és a módosított CLI smoke teszt sikeres. A readiness valódi Qdrant-adapter nélkül továbbra is 503. Részletek és parancsok: [API README](../../apps/api/README.md), [backend konfiguráció](backend.md).
+The backend, typed configuration, error handling, and JSON logging are complete. The project was installed using the actual uv.lock. The 36 backend tests, lockfile check, wheel/sdist build, live host HTTP smoke, and updated CLI smoke test passed. Readiness remains 503 without a real Qdrant adapter. Details and commands: [API README](../../apps/api/README.md), [backend configuration](backend.md).
 
 
-### FND-012–014 ellenőrzés
+### FND-012–014 validation
 
-A frontend hivatalos generátorból készült. A pnpm 12.15.0 szerinti frozen telepítés, ESLint, Next route typegen és TypeScript, 18 mockolt teszt, backend nélküli production build, CLI smoke és production HTTP smoke sikeres. A Node.js 24.22.1 és pnpm 12.15.0 host verzióra rögzítése után a `make doctor` sikeres volt. A lockfile SHA-256 ellenőrzőösszege változatlan, újragenerálás nem történt. A Qdrant-ready integrációt az FND-015–017, a teljes clean-clone diagnosztikai útvonalat az aktuális [release report](../foundation/release-report.md) rögzíti. Részletek: [frontend](../../apps/web/README.md).
+The frontend was created with the official generator. Frozen installation with pnpm 12.15.0, ESLint, Next route typegen and TypeScript, 18 mocked tests, production build without a backend, CLI smoke, and production HTTP smoke passed. After pinning the host versions of Node.js 24.22.1 and pnpm 12.15.0, `make doctor` passed. The lockfile SHA-256 checksum is unchanged, and no regeneration occurred. FND-015–017 records the Qdrant-ready integration, while the current [release report](../foundation/release-report.md) records the complete clean-clone diagnostics flow. Details: [frontend](../../apps/web/README.md).
 
-Az FND-015–017 infrastruktúra és valódi Qdrant readiness elkészült. Aktuális parancsok és validáció: [infrastruktúra](infrastructure.md).
+The FND-015–017 infrastructure and real Qdrant readiness are complete. Current commands and validation: [infrastructure](infrastructure.md).
 
-A `make test` offline backend- és frontendteszteket futtat. A `make jev-smoke` külön engedélyezett live TypeSafe ellenőrzés, nem része a normál tesztfutásnak. Részletek: [Jev integráció](jev-integration.md).
+`make test` runs offline backend and frontend tests. `make jev-smoke` is a separately authorized live TypeSafe check and is not part of normal test execution. Details: [Jev integration](jev-integration.md).

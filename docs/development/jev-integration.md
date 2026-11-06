@@ -1,33 +1,33 @@
-# Jev / TypeSafe integráció
+# Jev / TypeSafe integration
 
-A Python backend egyetlen TypeSafe integrációja az `integrations/jev` adapterréteg. SDK: `typesafe-sdk==0.7.5`, baseline modell: `jev-1.13.0`. A TypeSafe JavaScript SDK nem része a frontendnek. A Python 3.14 saját zstd támogatása elegendő, külön SDK extra nincs.
+The Python backend's only TypeSafe integration is the `integrations/jev` adapter layer. SDK: `typesafe-sdk==0.7.5`, baseline model: `jev-1.13.0`. The TypeSafe JavaScript SDK is not part of the frontend. Python 3.14's native zstd support is sufficient, with no additional SDK extra.
 
-## Konfiguráció
+## Configuration
 
-A root `.env.example` alapján állítsd be a root `.env` fájlt, meglévőt ne írj felül.
+Configure the root `.env` using the root `.env.example`. Do not overwrite an existing file.
 
-| Változó | Alapérték / szabály |
+| Variable | Default / rule |
 | --- | --- |
-| JEV_MODE | development/test: mock. Production esetén explicit live vagy disabled, mock tiltott |
-| TYPESAFE_API_KEY | SecretStr, csak live módban kötelező, nem lehet üres vagy hibás formátumú |
-| TYPESAFE_MODEL | jev-1.13.0, mozgó alias nem használható |
-| TYPESAFE_TIMEOUT_SECONDS | 5.0, pozitív és véges |
-| TYPESAFE_RETRY_MAX | 1, nem negatív egész |
-| TYPESAFE_RETRY_BUDGET_SECONDS | 10.0, pozitív és véges |
+| JEV_MODE | development/test: mock. Production requires explicit live or disabled mode, mock is forbidden |
+| TYPESAFE_API_KEY | SecretStr, required only in live mode, must not be empty or malformed |
+| TYPESAFE_MODEL | jev-1.13.0, floating aliases are not allowed |
+| TYPESAFE_TIMEOUT_SECONDS | 5.0, positive and finite |
+| TYPESAFE_RETRY_MAX | 1, non-negative integer |
+| TYPESAFE_RETRY_BUDGET_SECONDS | 10.0, positive and finite |
 
-Live kulcs nélkül és tiltott production konfigurációval az alkalmazás nem indul. A kulcs nem kerülhet frontendbe, NEXT_PUBLIC változóba vagy logba. Mock/disabled módban nincs SDK-kliens vagy külső hívás. A disabled adapter DecisionUnavailableError hibát ad. Nincs szolgáltatáshibát elfedő mock fallback.
+The application does not start without a key in live mode or with forbidden production configuration. The key must not enter the frontend, NEXT_PUBLIC variables, or logs. Mock/disabled mode creates no SDK client and makes no external calls. The disabled adapter raises DecisionUnavailableError. There is no mock fallback hiding service failures.
 
-A factory `decision_port` argumentummal explicit mockot fogadhat. A `get_decision_port` dependency FastAPI dependency_overrides segítségével is felülírható. Az alapértelmezett mockban nincsenek általános válaszok: a hívó tesztnek a teljes requesthez tartozó fixture-t kell adnia.
+The factory can accept an explicit mock through the `decision_port` argument. The `get_decision_port` dependency can also be overridden using FastAPI dependency_overrides. The default mock has no generic answers: the calling test must supply a fixture for the complete request.
 
-## Timeout, retry és hibák
+## Timeout, retry, and errors
 
-A Settings timeout, modell és RetryPolicy értékei közvetlenül az SDK-konstruktorba kerülnek. Nincs második alkalmazásszintű retry loop. Az SDK exponenciális backoffot és Retry-After figyelembevételt használ. 400/401/403/422 nem retryolható. 429, 529, átmeneti 500/502/503/504 és connection/timeout korlátozottan retryolható. A budget előtt a következő túl hosszú várakozást az SDK elutasítja.
+The Settings timeout, model, and RetryPolicy values are passed directly to the SDK constructor. There is no second application-level retry loop. The SDK uses exponential backoff and honors Retry-After. 400/401/403/422 are not retryable. 429, 529, transient 500/502/503/504, and connection/timeout errors may be retried within bounds. The SDK rejects a next wait that would exceed the remaining budget.
 
-A 400/422 invalid request, 401/403 authentication, 429 rate limited, timeout timeout, connection/5xx és minden más, ismeretlen SDK-hiba unavailable domain hiba. Az SDK-hibák leképezése az SDK típusos kivételosztályain alapul (nem a státuszkód attribútumán); invalid request hibát csak a 400/422 válasz vagy a request SDK-típusokra képezésének helyi hibája ad. A mock adapter fixture-jei explicit `(request, result)` párok, a teljes request pontos egyezése alapján. Hibás vagy hiányzó válasz invalid response. SDK exception, teljes provider body, state vagy API-kulcs nem része a domain hibaüzenetnek. A kliens inicializálási hibája biztonságos configuration hiba.
+400/422 map to invalid request, 401/403 to authentication, 429 to rate limited, timeouts to timeout, and connection/5xx and all other unknown SDK errors to unavailable domain errors. SDK error mapping uses the SDK's typed exception classes, not the status code attribute. Only 400/422 responses or local failures mapping the request to SDK types produce invalid request errors. Mock adapter fixtures are explicit `(request, result)` pairs matched against the exact complete request. Invalid or missing answers are invalid responses. Domain error messages do not contain SDK exceptions, complete provider bodies, state, or API keys. Client initialization failures produce safe configuration errors.
 
-A strukturált logok eseményt, request-korrelációt, modellazonosítót, provider request ID-t, kérdésszámot és primitívtípusokat, időtartamot, opcionális tokenszámot és biztonságos hibakódot tartalmaznak. State, instructions és válasz nem naplózható. A typesafe_sdk logger WARNING szinten fut, az SDK warningok tartalmát biztonságos állandó eseménynévre cseréljük, így ismeretlen kérdésazonosító vagy exception sem szivárog ki. A TYPESAFE_LOG_LEVEL=debug ezt a provider inicializálása után nem írja felül.
+Structured logs contain the event, request correlation, model identifier, provider request ID, question count and primitive types, duration, optional token counts, and safe error code. State, instructions, and answers must not be logged. The typesafe_sdk logger runs at WARNING level. SDK warning content is replaced with a safe constant event name, preventing leakage of unknown question identifiers or exceptions. TYPESAFE_LOG_LEVEL=debug does not override this after provider initialization.
 
-## Offline ellenőrzés
+## Offline validation
 
 ```sh
 make setup-api
@@ -36,26 +36,26 @@ make test
 make smoke
 ```
 
-A make test backend- és frontendteszteket futtat. Nem igényel Dockert, Qdrantot, API-kulcsot vagy külső hálózatot. A valódi SDK contract tesztjei HTTPX2 MockTransportot használnak, nem külön REST klienst. A retrytesztek nulla várakozással vagy mockolt async sleep-pel futnak, a budgetteszt várakozás nélkül ellenőriz. A HU/EN fixture-ök szerkezeti kompatibilitást igazolnak, nem azonos döntési pontosságot vagy kalibrációt.
+The make test command runs backend and frontend tests. It requires no Docker, Qdrant, API key, or external network. Contract tests for the real SDK use HTTPX2 MockTransport, not a separate REST client. Retry tests use zero wait or mocked async sleep, and the budget test checks behavior without waiting. HU/EN fixtures establish structural compatibility, not equal decision accuracy or calibration.
 
-## Opcionális élő smoke
+## Optional live smoke
 
-A live smoke fizetős külső kérést indíthat. Csak tudatos engedélyezéssel futtasd, a kulcsot biztonságos környezeti beállításból vagy a nem verziókezelt `.env` fájlból add meg.
-
-```sh
-JEV_LIVE_SMOKE=1 JEV_MODE=live make jev-smoke
-```
-
-A parancs csak érvényes TYPESAFE_API_KEY és hozzáférhető modell mellett működhet. Egy mesterséges, nem érzékeny state-et küld egyetlen system_one kérésben category/Choice, urgency/Score és needs_action/Noul kérdésekkel. Csak szerkezetet, modellazonosítót és értéktartományokat ellenőriz, konkrét döntést nem. Nem jelent mock eredményt élő sikerként. A normál pytest-futásban a live teszt akkor is skipped, ha a környezetben van API-kulcs. A külön CLI `--jev-live` kapcsoló és JEV_LIVE_SMOKE=1 együttesen szükséges.
-
-## Ellenőrzési eredmények
-
-116 backendteszt sikeres, 1 explicit live smoke skipped. A frontend 18 tesztje és a developer CLI smoke sikeres. A tesztek ellenőrzik a primitíveket, request/result validációt, mock determinisztikusságot, SDK wire-formátumot, hibamappinget, retry/budget viselkedést, klienslezárást, provider/DI-t és naplóvédelmet. Az SDK telepítése a backend függőségeit és uv.lock fájlját bővítette, a frontend függőségei változatlanok.
-
-2026-10-23-án az explicit élő smoke teszt is sikeresen lefutott:
+Live smoke may make a paid external request. Run it only with deliberate authorization, supplying the key through secure environment configuration or the untracked `.env` file.
 
 ```sh
 JEV_LIVE_SMOKE=1 JEV_MODE=live make jev-smoke
 ```
 
-Eredmény: `1 passed in 0.29s`, 0 kilépési kód. A valódi TypeSafe SDK egyetlen system_one kérésében a category/Choice, urgency/Score és needs_action/Noul primitívek strukturális szerződése, az eredményértékek érvényessége és a jev-1.13.0 modellazonosító ellenőrzése sikeres. Ez élő API-ellenőrzés volt, nem mock eredmény. Döntési pontosságot vagy HU/EN minőségi egyenértékűséget nem mér. A kulcsot és a teljes provider választ nem rögzítettük. A normál offline tesztfutásban a live smoke továbbra is skipped.
+The command requires a valid TYPESAFE_API_KEY and an accessible model. It sends a synthetic, non-sensitive state in a single system_one request with category/Choice, urgency/Score, and needs_action/Noul questions. It checks only structure, model identifier, and value ranges, not a specific decision. It does not report mock results as live success. During normal pytest execution, the live test is skipped even if an API key is present in the environment. Both the separate CLI `--jev-live` flag and JEV_LIVE_SMOKE=1 are required.
+
+## Validation results
+
+As of 2026-10-23 (FND-018–020 acceptance), 116 backend tests passed, with 1 explicit live smoke skipped. The frontend's 18 tests and the developer CLI smoke passed. Tests verify primitives, request/result validation, mock determinism, SDK wire format, error mapping, retry/budget behavior, client shutdown, provider/DI, and log protection. Installing the SDK extended backend dependencies and uv.lock, while frontend dependencies remained unchanged.
+
+On 2026-10-23, the explicit live smoke test also passed:
+
+```sh
+JEV_LIVE_SMOKE=1 JEV_MODE=live make jev-smoke
+```
+
+Result: `1 passed in 0.29s`, exit code 0. A single system_one request through the real TypeSafe SDK successfully verified the structural contract of category/Choice, urgency/Score, and needs_action/Noul primitives, the validity of result values, and the jev-1.13.0 model identifier. This was a live API check, not a mock result. It does not measure decision accuracy or HU/EN quality equivalence. The key and complete provider response were not recorded. Live smoke remains skipped during normal offline test execution.

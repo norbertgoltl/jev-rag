@@ -1,57 +1,57 @@
 # Jev + RAG
 
-## Leírás
+## Description
 
-A **Jev + RAG** egy tervezett, dokumentumalapú kérdés-válasz rendszer, amely a Retrieval-Augmented Generation (RAG) megközelítést a Jev döntési rétegével egészíti ki.
+**Jev + RAG** is a planned document-grounded question-answering system that combines Retrieval-Augmented Generation (RAG) with the Jev decision layer.
 
-A **01 Foundation** fázis működő FastAPI backendet, Next.js BFF-et, Qdrant infrastruktúrát és Jev DecisionPort adaptert biztosít. A teljes Foundation elfogadási állapotát a [release checklist](docs/foundation/release-checklist.md) és a [release report](docs/foundation/release-report.md) követi. Erre épül a **02 RAG Core** fázis működő, mérhető RAG baseline-ja.
+The **01 Foundation** phase provides a working FastAPI backend, Next.js BFF, Qdrant infrastructure, and Jev DecisionPort adapter. The [release checklist](docs/foundation/release-checklist.md) and [release report](docs/foundation/release-report.md) track acceptance of the complete Foundation. The **02 RAG Core** phase builds a working, measurable RAG baseline on this foundation.
 
-## A projekt célja
+## Project goal
 
-A rendszer célja, hogy a felhasználói kérdésekre a betöltött dokumentumokból visszakeresett információk alapján adjon választ, és a válaszhoz felhasznált forrásokat azonosíthatóvá tegye.
+The system aims to answer user questions using information retrieved from loaded documents and make the sources used for each answer identifiable.
 
-A tervezés magyar és angol nyelvű kérdésekkel, valamint vegyes nyelvű dokumentumállománnyal számol. Fontos szempont a visszakeresés és a válaszadás értékelhetősége, illetve a nem megfelelően alátámasztott válaszok kezelése.
+The design supports Hungarian and English questions and a document collection containing both languages. Key considerations include evaluating retrieval and answer quality and handling answers with insufficient supporting evidence.
 
-## Tervezett minimális működés
+## Planned minimum functionality
 
-A **02 RAG Core** tervezett feldolgozási folyamata:
+The planned processing flow for **02 RAG Core**:
 
-1. **Ingestion:** dokumentumok betöltése, feldolgozása, darabolása és kereshetővé tétele.
-2. **Retrieval:** a felhasználói kérdéshez kapcsolódó dokumentumrészletek visszakeresése.
-3. **Jev Decision Layer:** a visszakeresett bizonyítékok alapján a további válaszadási folyamat támogatása.
-4. **Answer Generation:** a rendelkezésre álló forrásokra támaszkodó válasz előállítása, forráshivatkozásokkal.
-5. **Evaluation:** a visszakeresés és a válaszadás minőségének ellenőrizhető értékelése.
+1. **Ingestion:** load, process, chunk, and index documents for search.
+2. **Retrieval:** retrieve document chunks relevant to the user's question.
+3. **Jev Decision Layer:** support subsequent answer processing based on the retrieved evidence.
+4. **Answer Generation:** produce an answer grounded in the available sources, with source citations.
+5. **Evaluation:** assess retrieval and answer quality in a verifiable way.
 
-A backend Python/FastAPI alapú, a helyi Python-fejlesztési környezetet `uv` kezeli. A webes felület Next.js alapú. A támogatott elsődleges fejlesztői környezet macOS Apple Silicon, a Qdrant Docker Compose-ban fut.
+The backend uses Python/FastAPI, with `uv` managing the local Python development environment. The web interface uses Next.js. The primary supported development environment is macOS Apple Silicon, with Qdrant running in Docker Compose.
 
-A felsorolt RAG-képességek **tervezett funkciók**, nem részei a jelenlegi Foundationnek.
+The RAG capabilities listed above are **planned features** and are not part of the current Foundation.
 
-## Foundation architektúradöntések
+## Foundation architecture decisions
 
-Az FND-001–004 tervezési eredményei elkészültek:
+The FND-001–004 design outputs are complete:
 
-- [FND-001: Scope és követelmények](docs/foundation/scope.md)
-- [FND-002: Rendszerarchitektúra](docs/architecture/system-architecture.md)
-- [FND-003: Interfészek és API-contractok](docs/architecture/interface-contracts.md)
-- [FND-003: Géppel olvasható OpenAPI-contract](docs/architecture/contracts/foundation.openapi.json)
+- [FND-001: Scope and requirements](docs/foundation/scope.md)
+- [FND-002: System architecture](docs/architecture/system-architecture.md)
+- [FND-003: Interfaces and API contracts](docs/architecture/interface-contracts.md)
+- [FND-003: Machine-readable OpenAPI contract](docs/architecture/contracts/foundation.openapi.json)
 - [FND-004: Qdrant vector store ADR](docs/adr/ADR-001-vector-store.md)
 
-A döntés moduláris FastAPI backend, Next.js frontend, külön Jev döntési adapter és Docker Compose-ban futó Qdrant. A backend, a frontend, az infrastruktúra és az SDK-integráció megvalósult; az integrált elfogadási állapotot a [release report](docs/foundation/release-report.md) rögzíti.
+The decision specifies a modular FastAPI backend, Next.js frontend, separate Jev decision adapter, and Qdrant running in Docker Compose. The backend, frontend, infrastructure, and SDK integration are implemented. The [release report](docs/foundation/release-report.md) records their integrated acceptance status.
 
-## Monorepo és fejlesztői környezet
+## Monorepo and development environment
 
-Az FND-005–007 alapstruktúrája és fejlesztői CLI-je elkészült. Elsődleges környezet: macOS Apple Silicon, POSIX shell és GNU/BSD Make. A rögzített Node.js-verzió `24.22.1`, a pnpm-verzió `12.15.0`. A backend uv-managed Python `3.14.8` interpretert használ, az FND-008–011 megvalósult.
+The FND-005–007 base structure and developer CLI are complete. The primary environment is macOS Apple Silicon, POSIX shell, and GNU/BSD Make. The pinned Node.js version is `24.22.1`, and the pnpm version is `12.15.0`. The backend uses uv-managed Python `3.14.8`, and FND-008–011 are implemented.
 
-| Könyvtár | Felelősség |
+| Directory | Responsibility |
 | --- | --- |
-| `apps/api` | Python/FastAPI projekt, saját uv.lock és .venv |
-| `apps/web` | Next.js projekt, a root pnpm workspace része |
-| `infra/compose.yaml` | Docker-infrastruktúra |
-| `scripts` | Fejlesztői parancsok és smoke tesztek |
-| `docs` | Architektúra, ADR-ek és fejlesztői útmutatók |
-| `.github` | PR-sablon és GitHub Actions CI |
+| `apps/api` | Python/FastAPI project with its own uv.lock and .venv |
+| `apps/web` | Next.js project in the root pnpm workspace |
+| `infra/compose.yaml` | Docker infrastructure |
+| `scripts` | Developer commands and smoke tests |
+| `docs` | Architecture, ADRs, and development guides |
+| `.github` | PR template and GitHub Actions CI |
 
-A repository gyökeréből futtatható:
+Run from the repository root:
 
 ```sh
 make help
@@ -59,11 +59,11 @@ make doctor
 make smoke
 ```
 
-A `doctor` csak ellenőriz, hiányzó eszköz vagy verzióeltérés esetén hibával lép ki. A `smoke` offline, szimulált eszközökkel ellenőrzi a CLI-t.
+`doctor` only performs checks and exits with an error when a tool is missing or a version differs. `smoke` checks the CLI offline using simulated tools.
 
 ## Local quickstart
 
-Docker Desktop legyen elindítva. A rögzített Python, Node.js és pnpm verziókat a [`docs/development/macos-setup.md`](docs/development/macos-setup.md) írja le.
+Docker Desktop must be running. The pinned Python, Node.js, and pnpm versions are documented in [`docs/development/macos-setup.md`](docs/development/macos-setup.md).
 
 ```sh
 fnm use
@@ -73,38 +73,38 @@ make setup
 make up
 ```
 
-Indítsd el külön terminálokban:
+Start in separate terminals:
 
 ```sh
 make dev-api
 make dev-web
 ```
 
-A felület címe `http://127.0.0.1:3000`, a backendé `http://127.0.0.1:8000`. A `.env.example` mock Jev módot használ, ezért a kezdő setuphoz nem kell élő API-kulcs. A readiness ellenőrzése és leállítás:
+The interface is available at `http://127.0.0.1:3000`, and the backend at `http://127.0.0.1:8000`. `.env.example` uses mock Jev mode, so initial setup does not require a live API key. Check readiness and stop the infrastructure:
 
 ```sh
 make health
 make down
 ```
 
-`make down` megőrzi a Qdrant adatvolume-ot.
+`make down` preserves the Qdrant data volume.
 
-Az FND-008–011 backendje elkészült: rögzített függőségek, backend tesztek és élő HTTP-smoke ellenőrzés. Részletek: [API README](apps/api/README.md).
+The FND-008–011 backend is complete, including locked dependencies, backend tests, and a live HTTP smoke check. Details: [API README](apps/api/README.md).
 
-A Python-projekt gyökere `apps/api`, a pnpm workspace gyökere a repository. Az API lockfile-ja `apps/api/uv.lock`, a frontendé az egyetlen root `pnpm-lock.yaml`. A FastAPI és Next.js a hoston, csak az infrastruktúra fut Dockerben.
+The Python project root is `apps/api`, and the pnpm workspace root is the repository. The API lockfile is `apps/api/uv.lock`, and the frontend uses the single root `pnpm-lock.yaml`. FastAPI and Next.js run on the host, with only infrastructure running in Docker.
 
-Részletek: [fejlesztői környezet, parancsok és Git-workflow](docs/development/workflow.md).
+Details: [development environment, commands, and Git workflow](docs/development/workflow.md).
 
-A backendhez előkészített parancsok: `make setup-api`, `make dev-api`, `make test-api`. Ezek a rögzített `apps/api/uv.lock` alapján futnak.
+Available backend commands are `make setup-api`, `make dev-api`, and `make test-api`. They use the locked `apps/api/uv.lock`.
 
-Az FND-012–014 frontend alap elkészült. Indítás: `make dev-web`. Telepítés, API-kommunikáció és ellenőrzések: [frontend dokumentáció](apps/web/README.md).
+The FND-012–014 frontend foundation is complete. Start it with `make dev-web`. Installation, API communication, and checks: [frontend documentation](apps/web/README.md).
 
-Qdrant infrastruktúra: `make up`, `make health`, `make status`, `make down`. Előfeltételek, named volume és izolált tesztek: [infrastruktúra](docs/development/infrastructure.md).
+Qdrant infrastructure: `make up`, `make health`, `make status`, `make down`. Prerequisites, named volume, and isolated tests: [infrastructure](docs/development/infrastructure.md).
 
-A Jev DecisionPort és TypeSafe SDK integráció elkészült. Quality gate: `make check`. Tesztelési és CI útmutató: [testing](docs/development/testing.md), [CI](docs/development/ci.md). Konfiguráció és külön engedélyezhető live smoke: [Jev integráció](docs/development/jev-integration.md).
+The Jev DecisionPort and TypeSafe SDK integration are complete. Quality gate: `make check`. Testing and CI guides: [testing](docs/development/testing.md), [CI](docs/development/ci.md). Configuration and separately authorized live smoke: [Jev integration](docs/development/jev-integration.md).
 
-## Security és agent workflow
+## Security and agent workflow
 
-A `TYPESAFE_API_KEY` csak a backend folyamatban használható, frontend bundle-be és nyilvános hibaválaszba nem kerülhet. A biztonsági szabályok, secret incidenseljárás és Gitleaks ellenőrzés a [security baseline](docs/development/security.md) dokumentumban találhatók. A repository agent- és PR-szabályait az [AGENTS.md](AGENTS.md) és az [agent workflow](docs/development/agent-workflow.md) rögzíti.
+`TYPESAFE_API_KEY` may only be used in the backend process and must never enter the frontend bundle or public error responses. Security rules, the secret incident procedure, and Gitleaks checks are documented in the [security baseline](docs/development/security.md). [AGENTS.md](AGENTS.md) and the [agent workflow](docs/development/agent-workflow.md) define repository rules for agents and pull requests.
 
-A lokális minőségellenőrzés `make check`; az integrált átadás további parancsai `make security-check`, `make security-smoke` és `make infra-test`. Az eredményeket csak tényleges futtatás után kell a [release reportban](docs/foundation/release-report.md) PASS-ra állítani.
+The local quality gate is `make check`. Integrated handoff additionally requires `make security-check`, `make security-smoke`, and `make infra-test`. Mark results as PASS in the [release report](docs/foundation/release-report.md) only after actually running the checks.

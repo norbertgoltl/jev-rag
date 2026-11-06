@@ -1,50 +1,50 @@
-# Backend konfiguráció és hibakezelés
+# Backend configuration and error handling
 
-## Konfiguráció
+## Configuration
 
-A `Settings` Pydantic Settings modell prioritása: explicit értékek, process environment, root `.env`, alapértelmezések. A `.env` abszolút útvonala a forrásfájl helyéből származik, nem az indítási könyvtárból. A hiányzó `.env` megengedett, az ismeretlen mezők figyelmen kívül maradnak, a Jev-beállítások típusosan validáltak. A fájl nem fut le shell kódként.
+The `Settings` Pydantic Settings model uses this priority order: explicit values, process environment, root `.env`, defaults. The absolute `.env` path is derived from the source file location, not the startup directory. A missing `.env` is allowed, unknown fields are ignored, and Jev settings undergo typed validation. The file is not executed as shell code.
 
-| Változó | Default | Validáció |
+| Variable | Default | Validation |
 | --- | --- | --- |
 | `APP_ENV` | `development` | `development`, `test`, `production` |
-| `APP_DEBUG` | `false` | Productionben nem lehet true |
-| `API_HOST` | `127.0.0.1` | Nem üres string |
-| `API_PORT` | `8000` | Egész, 1–65535 |
+| `APP_DEBUG` | `false` | Must not be true in production |
+| `API_HOST` | `127.0.0.1` | Non-empty string |
+| `API_PORT` | `8000` | Integer, 1–65535 |
 | `LOG_LEVEL` | `INFO` | DEBUG, INFO, WARNING, ERROR, CRITICAL |
-| `CORS_ALLOWED_ORIGINS` | `["http://127.0.0.1:3000"]` | JSON-tömb, explicit HTTP(S) origin, wildcard és útvonal nélkül |
+| `CORS_ALLOWED_ORIGINS` | `["http://127.0.0.1:3000"]` | JSON array, explicit HTTP(S) origins, no wildcards or paths |
 | `QDRANT_URL` | `http://127.0.0.1:6333` | HTTP(S) URL |
-| `QDRANT_TIMEOUT_SECONDS` | `1.0` | Pozitív, véges szám |
+| `QDRANT_TIMEOUT_SECONDS` | `1.0` | Positive, finite number |
 
-A mintafájl a root [.env.example](../../.env.example). TypeSafe-kulcsot a backend még nem igényel. A későbbi secret mezők `SecretStr` típusúak legyenek. Settings objektum vagy nyers konfiguráció nem kerül HTTP-válaszba és logba. Az Uvicorn indító hibás konfigurációnál biztonságos üzenettel leáll.
+The template is the root [.env.example](../../.env.example). The backend does not require a TypeSafe key yet. Future secret fields should use `SecretStr`. Settings objects and raw configuration must not enter HTTP responses or logs. The Uvicorn launcher exits with a safe message on invalid configuration.
 
-Az `APP_DEBUG` true értéke sem kapcsolhatja be a publikus Starlette traceback-válaszokat. A HTTP debug mód ezért mindig kikapcsolt. Tesztben `Settings(_env_file=None, ...)` és explicit factory injection használható. A tesztgyűjtés az importálható default appot is izolált konfigurációval tölti be.
+Setting `APP_DEBUG` to true must not enable public Starlette traceback responses. HTTP debug mode is therefore always disabled. Tests can use `Settings(_env_file=None, ...)` and explicit factory injection.
 
-## Hibák, CORS és request ID
+## Errors, CORS, and request ID
 
-A publikus hibaformátum `{error: {code, message, details}, request_id}`. A `details` nullable, validációs hibánál kizárólag bemeneti helyet és hibakódot tartalmaz. Nem szerepelhet benne inputérték, dinamikus dictionary-kulcs, SDK-válasz vagy stack trace.
+The public error format is `{error: {code, message, details}, request_id}`. `details` is nullable and contains only input locations and error codes for validation errors. It must not include input values, dynamic dictionary keys, SDK responses, or stack traces.
 
-A 404, 405, 422, 500 és alkalmazásszintű 503 az [interfészszerződést](../architecture/interface-contracts.md) követi. A 405 megőrzi az `Allow` headert. A readiness függőséghibája külön diagnosztikai JSON és 503. Ismeretlen alkalmazáshiba biztonságos `INTERNAL_ERROR` választ ad.
+404, 405, 422, 500, and application-level 503 responses follow the [interface contract](../architecture/interface-contracts.md). A 405 preserves the `Allow` header. Readiness dependency failures use a separate diagnostic JSON response and 503. Unknown application errors produce a safe `INTERNAL_ERROR` response.
 
-Minden HTTP-válasz `X-Request-ID` headert kap. A bejövő ID 1–64 ASCII betű, szám, pont, aláhúzás vagy kötőjel lehet. Hiányzó, hibás vagy több példányban küldött ID helyett UUID4 keletkezik. A hibatörzs azonosítója a válaszheaderével egyezik. A `ContextVar` a teljes ASGI kérés idejére érvényes, végül visszaáll.
+Every HTTP response receives an `X-Request-ID` header. Incoming IDs may contain 1–64 ASCII letters, digits, dots, underscores, or hyphens. Missing, invalid, or duplicate IDs are replaced by a generated UUID4. The identifier in the error body matches the response header. The `ContextVar` applies throughout the ASGI request and is reset afterward.
 
-A request context és a CORS a Starlette server-error rétegén kívül található, ezért a preflight és az 500-as válasz is korrelálható. CORS: csak a konfigurált originlista, GET/OPTIONS, Content-Type/X-Request-ID request header, X-Request-ID exposed header, credentials nélkül.
+Request context and CORS sit outside the Starlette server-error layer, allowing correlation of preflight and 500 responses as well. CORS allows only the configured origin list, GET/OPTIONS, Content-Type/X-Request-ID request headers, and the X-Request-ID exposed header, without credentials.
 
-## Rétegek és függőségek
+## Layers and dependencies
 
-A `domain`, `application`, `core` és `integrations` csomag nem importál FastAPI-t és az `api` csomagot. A `domain` és az `application` emellett nem importál HTTP-klienst (`httpx`) vagy `integrations` kódot. Ezt a `tests/unit/test_architecture.py` ellenőrzi. A HTTP-hibakezelés az `api/errors.py`-ban van. A futási szolgáltatásokat az `app.state.container` típusos `AppContainer` objektum tartja (settings, readiness probe, decision port), a route-ok az `api/dependencies.py` `get_settings`, `get_readiness_probe` és `get_decision_port` FastAPI dependency-jein keresztül érik el. Hiányzó szolgáltatásnál a dependency `ServiceUnavailableError`-t dob, ami `503 SERVICE_UNAVAILABLE` választ ad.
+The `domain`, `application`, `core`, and `integrations` packages do not import FastAPI or the `api` package. In addition, `domain` and `application` do not import an HTTP client (`httpx`) or `integrations` code. `tests/unit/test_architecture.py` verifies this. HTTP error handling resides in `api/errors.py`. Runtime services are held by the typed `AppContainer` object at `app.state.container` (settings, readiness probe, decision port). Routes access them through the `get_settings`, `get_readiness_probe`, and `get_decision_port` FastAPI dependencies in `api/dependencies.py`. If a service is missing, the dependency raises `ServiceUnavailableError`, producing a `503 SERVICE_UNAVAILABLE` response.
 
-## Strukturált logging
+## Structured logging
 
-A standard `logging` JSON formatter UTC ISO-időbélyeget, szintet, service-t, eseményt és request ID-t ír. A HTTP completion esemény ezen felül metódust, query nélküli pathot, státuszt és időtartamot tartalmaz. Váratlan hibánál csak az exception típusa kerül a logba, a szövege és stack trace nélkül.
+The standard `logging` JSON formatter writes a UTC ISO timestamp, level, service, event, and request ID. HTTP completion events additionally contain the method, path without query, status, and duration. Unexpected errors log only the exception type, without its message or stack trace.
 
-A request/response body, authorization header, API-kulcs, query string, dokumentumtartalom és Settings objektum nem naplózható. A formatter csak a kijelölt extra mezőket szerializálja. A lezárt biztonságos 500-as válasz után visszadobott Starlette-hibát a külső middleware lezárja, hogy Uvicorn ne írja ki a nyers kivételt.
+Request/response bodies, authorization headers, API keys, query strings, document content, and Settings objects must not be logged. The formatter serializes only designated extra fields. After a safe 500 response is complete, the outer middleware handles the re-raised Starlette error so that Uvicorn does not print the raw exception.
 
-A hivatalos `jev-rag-api` indító kikapcsolja az Uvicorn access logját és JSON formátumra állítja a szerverlogokat. Egy HTTP-kéréshez egy completion esemény tartozik. A megszakadt streaming válasz nem folytatható új hibatörzzsel.
+The official `jev-rag-api` launcher disables Uvicorn access logs and configures server logs as JSON. Each HTTP request has one completion event. An interrupted streaming response cannot be continued with a new error body.
 
-## Ellenőrzések
+## Checks
 
-A tesztek fake readiness probe-ot és HTTPX/TestClient transportot használnak, Docker és AI-kulcs nélkül. Vizsgálandó a két readiness állapot és timeout, a külső hívást nem végző liveness/status, CORS, konfigurációprioritás, 404/405/422/500/503, request ID és párhuzamosság, valamint a logok adatvédelme.
+Tests use fake readiness probes and HTTPX/TestClient transports, without Docker or an AI key. Checks should cover both readiness states and timeout, liveness/status without external calls, CORS, configuration priority, 404/405/422/500/503, request IDs and concurrency, and log privacy.
 
-Az aktuális végrehajtási állapot az [API README-ben](../../apps/api/README.md) található. A 36 pytest teszt és a hoston futó Uvicorn HTTP-smoke ellenőrzése sikeres, az utóbbi után a tesztszerver leállt. A Qdrant/Jev továbbra sem része ennek az ellenőrzésnek.
+The current execution status is documented in the [API README](../../apps/api/README.md). The 36 pytest tests and the host-based Uvicorn HTTP smoke check passed. The test server was stopped after the latter. Qdrant/Jev remain outside this validation.
 
-Az FND-018–020 döntési integráció konfigurációja és tesztelése: [Jev integráció](jev-integration.md).
+FND-018–020 decision integration configuration and testing: [Jev integration](jev-integration.md).

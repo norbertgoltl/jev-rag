@@ -1,27 +1,27 @@
-# FND-003 – Interfészek és API-contractok
+# FND-003 – Interfaces and API contracts
 
-Állapot: specifikált szerződések. A HTTP-contract géppel olvasható alakja: [foundation.openapi.json](contracts/foundation.openapi.json), OpenAPI 3.1.0.
+Status: specified contracts. The machine-readable HTTP contract is [foundation.openapi.json](contracts/foundation.openapi.json), OpenAPI 3.1.0.
 
-Ez a contract-first alap a későbbi implementációhoz. A HTTP-sémák itt már konkrétak, a futó FastAPI endpointok az FND-009–011, a Qdrant-adapter az FND-017, a DecisionPort és adapterei az FND-018–020 feladatai. Embedding- és generator-implementáció nem része a Foundationnek.
+This is the contract-first foundation for later implementation. The HTTP schemas are already concrete here. Running FastAPI endpoints belong to FND-009–011, the Qdrant adapter to FND-017, and DecisionPort and its adapters to FND-018–020. Embedding and generator implementations are not part of Foundation.
 
 ## HTTP API
 
-Minden üzleti endpoint prefixe `/api/v1`. A folyamatdiagnosztikai health endpointok ezen kívül maradnak. A sikeres válaszok endpointspecifikusak, általános response wrapper nélkül.
+All business endpoints use the `/api/v1` prefix. Process diagnostic health endpoints remain outside it. Successful responses are endpoint-specific, without a general response wrapper.
 
-| Metódus és útvonal | HTTP | Pontos JSON-válasz |
+| Method and path | HTTP | Exact JSON response |
 | --- | --- | --- |
 | `GET /health/live` | 200 | `{"status":"alive"}` |
 | `GET /health/ready` | 200 | `{"status":"ready","dependencies":{"qdrant":"up"}}` |
 | `GET /health/ready` | 503 | `{"status":"not_ready","dependencies":{"qdrant":"down"}}` |
 | `GET /api/v1/system/status` | 200 | `{"service":"api","status":"ok"}` |
 
-A liveness és a system status nem hív külső szolgáltatást. A status az API elérhetőségét jelzi, nem helyettesíti a readinesst. A readiness a szükséges Qdrant-kapcsolatot vizsgálja konfigurált, véges timeouttal. A kezdeti, valódi adapter nélküli probe `down`, nem adhat hamis `ready` állapotot. A Jev elérhetősége nem része a readiness feltételének.
+Liveness and system status do not call external services. Status indicates API availability and does not replace readiness. Readiness checks the required Qdrant connection with a configured, finite timeout. The initial probe without a real adapter reports `down` and must not report a false `ready` state. Jev availability is not a readiness condition.
 
-A readiness várható függőséghibája a táblázat szerinti diagnosztikai 503, nem általános error envelope. Váratlan alkalmazáshiba bármely endpointon a közös 500-as hibasémát használja. A válaszok nem tartalmaznak credentialt, belső címet, connection stringet vagy stack trace-t.
+An expected readiness dependency failure uses the diagnostic 503 response in the table, not the general error envelope. Unexpected application errors on any endpoint use the shared 500 error schema. Responses contain no credentials, internal addresses, connection strings, or stack traces.
 
-Az FND-009 később `/openapi.json` és `/docs` fejlesztői felületet is biztosít. Az itt tárolt OpenAPI-fájl a három Foundation endpoint szerződése, nem futó alkalmazásból exportált eredmény.
+FND-009 will also provide the `/openapi.json` and `/docs` developer interfaces. The OpenAPI file stored here is the contract for the three Foundation endpoints, not an export from a running application.
 
-## Hibák és request ID
+## Errors and request ID
 
 ```json
 {
@@ -34,30 +34,30 @@ Az FND-009 később `/openapi.json` és `/docs` fejlesztői felületet is biztos
 }
 ```
 
-| Mező | Típus és feltétel |
+| Field | Type and condition |
 | --- | --- |
-| `error.code` | Kötelező, nem üres stabil gépi kód |
-| `error.message` | Kötelező, biztonságos, nem üres publikus üzenet |
-| `error.details` | Kötelező kulcs, `null` vagy szűrt `{field, code}` elemek listája |
-| `request_id` | Kötelező, a válasz `X-Request-ID` headerével megegyező azonosító |
+| `error.code` | Required, non-empty stable machine code |
+| `error.message` | Required, safe, non-empty public message |
+| `error.details` | Required key, `null` or a list of sanitized `{field, code}` items |
+| `request_id` | Required identifier matching the response `X-Request-ID` header |
 
-A kiinduló terv opcionális részleteit egységesen jelen lévő, nullable `details` mezőként pontosítjuk. A validációs adatok kizárólag biztonságos mezőazonosítót és hibakódot tartalmazhatnak, inputértéket és nyers kivételt nem.
+The optional details in the initial plan are refined into a consistently present, nullable `details` field. Validation data may contain only safe field identifiers and error codes, never input values or raw exceptions.
 
-| Eset | HTTP | `error.code` | Publikus üzenet |
+| Case | HTTP | `error.code` | Public message |
 | --- | --- | --- | --- |
-| Érvénytelen kérés | 422 | `VALIDATION_ERROR` | `Invalid request` |
-| Ismeretlen endpoint | 404 | `NOT_FOUND` | `Resource not found` |
-| Tiltott HTTP-metódus | 405 | `METHOD_NOT_ALLOWED` | `Method not allowed` |
-| Későbbi üzleti függőséghiba | 503 | `SERVICE_UNAVAILABLE` | `Service unavailable` |
-| Nem kezelt hiba | 500 | `INTERNAL_ERROR` | `Internal server error` |
+| Invalid request | 422 | `VALIDATION_ERROR` | `Invalid request` |
+| Unknown endpoint | 404 | `NOT_FOUND` | `Resource not found` |
+| Disallowed HTTP method | 405 | `METHOD_NOT_ALLOWED` | `Method not allowed` |
+| Future business dependency failure | 503 | `SERVICE_UNAVAILABLE` | `Service unavailable` |
+| Unhandled error | 500 | `INTERNAL_ERROR` | `Internal server error` |
 
-A 405-ös válasz megőrzi az `Allow` headert. A Foundation diagnosztikai GET-ek nem vesznek át üzleti bemenetet, ezért a 422-es séma a későbbi endpointok közös komponense, nem egy kitalált kérésparaméter.
+The 405 response preserves the `Allow` header. Foundation diagnostic GET endpoints accept no business input, so the 422 schema is a shared component for future endpoints, not an invented request parameter.
 
-Minden válasz, a health és a hibaválasz is, tartalmaz `X-Request-ID` headert. A bejövő azonosító 1–64 ASCII betűből, számból, `.`, `_`, `-` karakterből állhat. Hiányzó vagy érvénytelen érték helyett UUID4 generálódik. Az érvénytelen header nem okoz 422-t. Aszinkron kérések között a request context nem keveredhet.
+Every response, including health and error responses, contains an `X-Request-ID` header. An incoming identifier may contain 1–64 ASCII letters, digits, `.`, `_`, or `-` characters. Missing or invalid values are replaced by a generated UUID4. An invalid header does not cause a 422. Request contexts must not leak between asynchronous requests.
 
-## Belső portok
+## Internal ports
 
-A portok saját domainmodelljeikkel dolgoznak. Nem adhatnak vissza SDK-válaszobjektumot vagy SDK-kivételt az application rétegnek. Az alábbi szignatúrák implementációs szerződések, a hivatkozott típusokat az illetékes backendfeladat vezeti be.
+Ports use their own domain models. They must not return SDK response objects or SDK exceptions to the application layer. The signatures below are implementation contracts. The relevant backend task introduces the referenced types.
 
 ```python
 class DecisionPort(Protocol):
@@ -68,92 +68,92 @@ class VectorStorePort(Protocol):
     async def check_health(self) -> bool: ...
 ```
 
-A `VectorStorePort.check_health` nem ír adatot és nem hoz létre collectiont. Siker esetén `True`, timeout vagy ismert elérési hiba esetén `False`. A readiness kizárólag ezt a providerfüggetlen eredményt használja, a technikai hibát az adapter biztonságosan naplózza. A timeout konfigurálható és véges. A valódi probe Qdrantot hív, unit tesztben fake-kel helyettesíthető.
+`VectorStorePort.check_health` does not write data or create collections. It returns `True` on success and `False` on timeout or known connectivity errors. Readiness uses only this provider-independent result. The adapter safely logs technical errors. The timeout is configurable and finite. The real probe calls Qdrant and can be replaced by a fake in unit tests.
 
-| Későbbi határ | Bemenet | Eredmény és invariáns |
+| Future boundary | Input | Result and invariant |
 | --- | --- | --- |
-| Vector upsert | Verziózott chunkok, modellazonosító, megfelelő dimenziójú vektorok | Stabil chunkazonosítóra idempotens indexelés |
-| Vector search | Query-vektor, modellazonosító, limit, alkalmazás által ellenőrzött hatókör és filterek | Rangsorolt chunkok és numerikus retrieval score, SDK-típus nélkül |
-| Vector delete | Explicit dokumentum-/chunkazonosító és verzióhatár | Kizárólag a kijelölt adatok törlése |
-| EmbeddingPort | Dokumentumszövegek vagy query, a választott modell konfigurációja | Véges értékű vektorok, modellazonosító és dimenzió, hibás modell/dimenzió elutasítva |
-| GeneratorPort | Kérdés és azonosítható forrásszövegek | Válasz és a felhasznált források azonosítói, SDK-típus nélkül |
+| Vector upsert | Versioned chunks, model identifier, vectors with the correct dimension | Idempotent indexing by stable chunk identifier |
+| Vector search | Query vector, model identifier, limit, application-verified scope and filters | Ranked chunks and numeric retrieval score, without SDK types |
+| Vector delete | Explicit document/chunk identifier and version boundary | Delete only the selected data |
+| EmbeddingPort | Document texts or query, selected model configuration | Finite-valued vectors, model identifier and dimension, invalid model/dimension rejected |
+| GeneratorPort | Question and identifiable source texts | Answer and identifiers of sources used, without SDK types |
 
-Ezek követelményhatárok, nem előre létrehozandó metódusok vagy üres implementációk. A RAG Core rögzíti a végleges típusokat, collection sémát, embedding dimenziót és retrieval score szemantikáját. A generálás nem végez közvetlen retrievalt, a források kiválasztását az application koordinálja.
+These are requirement boundaries, not methods or empty implementations to create in advance. RAG Core defines the final types, collection schema, embedding dimension, and retrieval score semantics. Generation does not perform retrieval directly. The application coordinates source selection.
 
 ## Jev Decision Contract
 
-| Tulajdonság | Szerződés |
+| Property | Contract |
 | --- | --- |
-| SDK és kliens | `typesafe-sdk`, `AsyncTypeSafeClient`, backendről |
-| Művelet | `system_one(state=..., questions=...)`, adapterből |
-| Konfiguráció | Szerveroldali `TYPESAFE_API_KEY`, explicit, konfigurálható modellazonosító |
-| Módok | Alapértelmezett offline mock, külön explicit live mód, disabled esetén nincs hívás |
-| Életciklus | Workerenként újrafelhasznált kliens, aszinkron lezárás |
-| Hibatűrés | 5 s HTTP timeout, legfeljebb 1 SDK retry, 10 s retry budget, második retry loop nélkül |
-| Fallback | A use case explicit döntése, nincs automatikus live → mock váltás |
+| SDK and client | `typesafe-sdk`, `AsyncTypeSafeClient`, from the backend |
+| Operation | `system_one(state=..., questions=...)`, from the adapter |
+| Configuration | Server-side `TYPESAFE_API_KEY`, explicit, configurable model identifier |
+| Modes | Default offline mock, separate explicit live mode, no calls when disabled |
+| Lifecycle | Client reused per worker, asynchronous shutdown |
+| Resilience | 5 s HTTP timeout, at most 1 SDK retry, 10 s retry budget, no second retry loop |
+| Fallback | Explicit use case decision, no automatic live → mock switch |
 
-Az [aszinkron kliens](https://docs.typesafe.ai/sdk/python/api/clients/async) támogat timeoutot és retry policyt. A pontos SDK-verzió, modellpin és végrehajtott kompatibilitási ellenőrzés az FND-019–020 kimenete. A modellváltást contract teszteknek, a későbbi üzleti policy esetén minőségmérésnek is jóvá kell hagynia.
+The [asynchronous client](https://docs.typesafe.ai/sdk/python/api/clients/async) supports timeouts and retry policies. The exact SDK version, model pin, and completed compatibility checks are outputs of FND-019–020. A model change must pass contract tests and, for future business policy, quality measurements as well.
 
-### Bemenet
+### Input
 
-`DecisionRequest.state`: nem null string, JSON-objektum vagy JSON-tömb. `questions`: legalább egy kérdés, nem üres, egyedi stringazonosítóval kulcsolt map. `QuestionSpec`: a `type` szerint diszkriminált unió.
+`DecisionRequest.state`: non-null string, JSON object, or JSON array. `questions`: a map of at least one question, keyed by non-empty, unique string identifiers. `QuestionSpec`: a union discriminated by `type`.
 
-| Típus | Mezők |
+| Type | Fields |
 | --- | --- |
-| `ChoiceQuestionSpec` | `type="choice"`, nem üres `instructions`, `criteria`: legalább két nem üres opcióazonosítót stringhez vagy nullhoz rendelő map |
-| `ScoreQuestionSpec` | `type="score"`, nem üres `instructions`, `criteria`: 2–10 rendezett, nem üres szöveges szint |
-| `NoulQuestionSpec` | `type="noul"`, nem üres `instructions`, opcionális `criteria`: `true` és/vagy `false` szöveges leírás |
+| `ChoiceQuestionSpec` | `type="choice"`, non-empty `instructions`, `criteria`: a map from at least two non-empty option identifiers to strings or null |
+| `ScoreQuestionSpec` | `type="score"`, non-empty `instructions`, `criteria`: 2–10 ordered, non-empty text levels |
+| `NoulQuestionSpec` | `type="noul"`, non-empty `instructions`, optional `criteria`: text descriptions for `true` and/or `false` |
 
-A Foundation szöveges kritériumokat használ. Az SDK további multimodális és strukturált kérdésképességei nem kerülnek automatikusan a belső portba. A provider típusait az adapter képezi le a [TypeSafe kérdésszerződése](https://docs.typesafe.ai/sdk/python/api/types/questions) alapján.
+Foundation uses text criteria. Additional multimodal and structured question capabilities in the SDK are not automatically exposed through the internal port. The adapter maps provider types according to the [TypeSafe question contract](https://docs.typesafe.ai/sdk/python/api/types/questions).
 
-### Kimenet és validáció
+### Output and validation
 
-`DecisionResult`: kötelező, nem üres `model` és `answers` map, opcionálisan nullable `provider_request_id`, nem negatív egész `input_tokens` és `output_tokens`. Az `answers` minden kért azonosítóhoz pontosan egy választ tartalmaz, többlet nélkül.
+`DecisionResult`: required, non-empty `model` and `answers` map, optionally nullable `provider_request_id`, non-negative integer `input_tokens` and `output_tokens`. `answers` contains exactly one answer for every requested identifier, with no extras.
 
-| Választípus | Mezők és jelentés |
+| Answer type | Fields and meaning |
 | --- | --- |
-| `ChoiceAnswer` | `type="choice"`, engedélyezett `choice`, opcióazonosítóhoz rendelt `probabilities`, `confidence` |
-| `ScoreAnswer` | `type="score"`, törtértéket is megőrző `score`, szintindexhez rendelt `probabilities`, `confidence` |
-| `NoulAnswer` | `type="noul"`, `noul`: 0–1 valószínűség, külön confidence nélkül |
+| `ChoiceAnswer` | `type="choice"`, allowed `choice`, `probabilities` keyed by option identifier, `confidence` |
+| `ScoreAnswer` | `type="score"`, `score` preserving fractional values, `probabilities` keyed by level index, `confidence` |
+| `NoulAnswer` | `type="noul"`, `noul`: probability between 0 and 1, no separate confidence |
 
-A Score intervalluma `0..len(criteria)-1`. A probabilities és confidence véges, 0–1 közötti számok. A Choice eloszláskulcsai pontosan az opciók, a Score eloszláskulcsai a skála egész indexei. A visszatérő primitív egyezik a kérésével. A válasz nem kerekíthető egész score-rá, hiányzó mező nem pótolható kitalált értékkel. Az adapter az [SDK-válaszokat](https://docs.typesafe.ai/sdk/python/api/types/responses) saját domainmodellre alakítja, tényleges modellazonosítóval.
+The Score range is `0..len(criteria)-1`. Probabilities and confidence are finite numbers between 0 and 1. Choice distribution keys are exactly the options. Score distribution keys are the integer indexes of the scale. The returned primitive matches the requested one. Answers must not be rounded to integer scores, and missing fields must not be filled with invented values. The adapter converts [SDK responses](https://docs.typesafe.ai/sdk/python/api/types/responses) into its own domain model, preserving the actual model identifier.
 
-### Hibák, mock és végrehajtási határ
+### Errors, mock, and execution boundary
 
-Az `evaluate` kizárólag `DecisionError` leszármazottat adhat ismert providerhiba esetén. Az elvárt kategóriák: `DecisionInvalidRequestError`, `DecisionAuthenticationError`, `DecisionRateLimitedError`, `DecisionUnavailableError`, `DecisionTimeoutError`, `DecisionInvalidResponseError`, `DecisionConfigurationError`. Hibás vagy hiányos providereredmény invalid response, nem sikeres döntés.
+For known provider errors, `evaluate` may raise only a `DecisionError` subclass. Expected categories: `DecisionInvalidRequestError`, `DecisionAuthenticationError`, `DecisionRateLimitedError`, `DecisionUnavailableError`, `DecisionTimeoutError`, `DecisionInvalidResponseError`, `DecisionConfigurationError`. Invalid or incomplete provider results are invalid responses, not successful decisions.
 
-400/401/403/422 hibára nincs retry. A 429, átmeneti provider- és hálózati hibák korlátozottan újrapróbálhatók. A hibák nem tartalmazhatnak API-kulcsot, state-et vagy nyers provider body-t. Az SDK DEBUG body-naplózása nem engedélyezett.
+400/401/403/422 errors are not retried. 429, transient provider errors, and network errors may be retried within bounds. Errors must not contain API keys, state, or raw provider bodies. SDK DEBUG body logging is not allowed.
 
-A mock konfigurált fixture-öket ad vissza determinisztikusan, külső hálózat és API-kulcs nélkül. Hiányzó fixture explicit hiba. Ugyanazok a bemeneti és kimeneti invariánsok vonatkoznak rá, mint a live adapterre. A normál tesztek offline futnak, a live smoke külön, szintetikus HU/EN inputtal, konkrét modellítélet helyett struktúrát ellenőriz.
+The mock returns configured fixtures deterministically, without external network access or an API key. A missing fixture is an explicit error. The same input and output invariants apply as for the live adapter. Normal tests run offline. Live smoke runs separately with synthetic HU/EN input and checks structure rather than a specific model judgment.
 
-A modellválasz döntési bemenet. Az alkalmazás determinisztikus policy alapján végrehajt, visszautasít vagy explicit fallbacket választ. Numerikus számítás, dátum-összehasonlítás és autorizáció kódban történik, nem a modell ítéletére támaszkodik.
+The model response is decision input. The application executes, rejects, or selects an explicit fallback according to deterministic policy. Numeric calculations, date comparisons, and authorization are implemented in code and do not rely on model judgment.
 
-## RAG chunk-adatok követelményei
+## RAG chunk data requirements
 
-| Mező | Követelmény |
+| Field | Requirement |
 | --- | --- |
-| `chunk_id` | Stabil azonosító az adott chunkverzióhoz |
-| `document_id` | A forrásdokumentum azonosítója |
-| `document_version` | A feldolgozott forrás verziója |
-| `content` | Kereshető szöveg |
-| `source_uri` | Hivatkozható forráshely |
-| `chunk_index` | Nem negatív dokumentumon belüli sorrend |
-| `metadata` | Strukturált, JSON-kompatibilis keresési metaadatok |
-| `embedding_model` | A vektort előállító modell azonosítója |
-| `access_scope` | Az alkalmazás által ellenőrzött jogosultsági hatókör |
+| `chunk_id` | Stable identifier for the given chunk version |
+| `document_id` | Source document identifier |
+| `document_version` | Version of the processed source |
+| `content` | Searchable text |
+| `source_uri` | Citable source location |
+| `chunk_index` | Non-negative position within the document |
+| `metadata` | Structured, JSON-compatible search metadata |
+| `embedding_model` | Identifier of the model that produced the vector |
+| `access_scope` | Application-verified authorization scope |
 
-A konkrét mezőtípusok és azonosítóképzés, a modell, a dimenzió és a collection séma a RAG Core döntése. A document version és a feldolgozási konfiguráció együtt teszi reprodukálhatóvá az indexet. A kereséshez szükséges hatókört az application határozza meg ellenőrzötten, azt nem veheti át szabadon a felhasználótól.
+Specific field types and identifier generation, model, dimension, and collection schema are RAG Core decisions. The document version and processing configuration together make the index reproducible. The application determines and verifies the search scope. It must not accept an arbitrary scope from the user.
 
-## Elfogadási ellenőrzések a megvalósító feladatokhoz
+## Acceptance checks for implementation tasks
 
-| Ellenőrzés | Elvárt eredmény | Tulajdonos |
+| Check | Expected result | Owner |
 | --- | --- | --- |
-| HTTP-contract | Pontos endpoint, státuszkód, JSON és request ID | FND-009–011 |
-| Health izoláció | Liveness/status külső hívás nélkül, Qdrant down → 503, Jev down nem befolyásol | FND-009, FND-017 |
-| Hibatartalom | Egységes envelope, szűrt details, titok és stack trace nélkül | FND-011 |
-| Qdrant-határ | Fake probe unit tesztben, valódi probe külön integration tesztben | FND-017 |
-| Decision contract | Mindhárom primitív, teljes azonosítóegyezés, invalid input/output elutasítva | FND-018–020 |
-| Providerhibák | Timeout/retry határolt, SDK-hiba nem szivárog, nincs csendes fallback | FND-019–020 |
-| Offline futás | Mock és SDK contract teszt külső AI-hívás nélkül, live smoke elkülönítve | FND-020–023 |
+| HTTP contract | Exact endpoint, status code, JSON, and request ID | FND-009–011 |
+| Health isolation | Liveness/status without external calls, Qdrant down → 503, unaffected by Jev down | FND-009, FND-017 |
+| Error content | Consistent envelope, sanitized details, no secrets or stack traces | FND-011 |
+| Qdrant boundary | Fake probe in unit tests, real probe in separate integration tests | FND-017 |
+| Decision contract | All three primitives, exact identifier matching, invalid input/output rejected | FND-018–020 |
+| Provider errors | Bounded timeout/retry, no SDK error leakage, no silent fallback | FND-019–020 |
+| Offline execution | Mock and SDK contract tests without external AI calls, separate live smoke | FND-020–023 |
 
-Az FND-003 specifikációs elfogadása teljesült: az API-verziózás, hibák, health, DecisionPort, Qdrant-határ és későbbi providerhatárok meghatározottak. A fenti futásidejű ellenőrzések a megjelölt implementációs feladatok lezárási feltételei.
+FND-003 specification acceptance is complete: API versioning, errors, health, DecisionPort, the Qdrant boundary, and future provider boundaries are defined. The runtime checks above are completion conditions for the designated implementation tasks.

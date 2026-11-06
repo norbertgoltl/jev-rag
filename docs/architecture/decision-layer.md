@@ -1,23 +1,23 @@
 # Decision Layer
 
-A Decision Layer strukturált döntéseket szolgáltat, alkalmazásszintű műveleteket nem hajt végre. Nem generál természetes nyelvű választ, nem indít toolt, és nem tartalmaz RAG routingot, rangsorolást vagy végrehajtási küszöbértéket.
+The Decision Layer provides structured decisions and does not execute application-level operations. It does not generate natural-language answers, invoke tools, or contain RAG routing, ranking, or execution thresholds.
 
-Az application réteg a `DecisionPort.evaluate(DecisionRequest) -> DecisionResult` aszinkron portot használja. A domain és application réteg nem importál TypeSafe SDK-t. A kivételek a `DecisionError` hierarchia típusai, biztonságos kóddal és retryable jelzővel. A provider konfiguráció alapján választ mock/live/disabled adaptert, hiba esetén nincs automatikus live → mock váltás.
+The application layer uses the asynchronous `DecisionPort.evaluate(DecisionRequest) -> DecisionResult` port. The domain and application layers do not import the TypeSafe SDK. Exceptions belong to the `DecisionError` hierarchy, with a safe code and retryable flag. The provider selects mock/live/disabled adapters based on configuration. Errors do not trigger an automatic live → mock switch.
 
-## Szerződések
+## Contracts
 
-A request nem null szöveges vagy JSON objektum/tömb state-et és nem üres question-ID mapet tartalmaz. Az azonosítók nem üresek, a primitív diszkriminátor kötelező. Nem véges JSON számot nem engedünk át.
+The request contains a non-null text or JSON object/array state and a non-empty question-ID map. Identifiers are non-empty, and the primitive discriminator is required. Non-finite JSON numbers are rejected.
 
-- Choice: nem üres instructions, legalább két opció és opcionális szöveges leírás. Eredménye választás, opció szerinti valószínűségek és confidence.
-- Score: 2–10 rendezett, nem üres szöveges szint. Az első szint indexe 0. Eredménye törtértéket is megőrző score, egész indexű eloszlás és confidence.
-- Noul: nem üres instructions, opcionális true/false szöveges kritériumok. A noul önmagában valószínűség, nincs hozzáadott confidence.
+- Choice: non-empty instructions, at least two options, and optional text descriptions. Returns a choice, per-option probabilities, and confidence.
+- Score: 2–10 ordered, non-empty text levels. The first level has index 0. Returns a score preserving fractional values, an integer-indexed distribution, and confidence.
+- Noul: non-empty instructions and optional true/false text criteria. The noul value is itself a probability, with no additional confidence.
 
-A result pontosan a kért question-ID-kra ad azonos primitívű választ. A Choice kiválasztása és eloszláskulcsai a megadott opciókhoz tartoznak. A Score és az eloszlás indexei a megadott skálán belüliek. Minden probability/confidence véges és 0–1 közötti. Hibás vagy hiányzó eredményt nem egészítünk ki alapértelmezett döntéssé. A model, opcionális provider request ID és tokenhasználat megmarad. A numerikus értékeket nem kerekítjük, confidence-ből nem következik végrehajtási engedély.
+The result answers exactly the requested question IDs using the same primitives. The Choice selection and distribution keys belong to the supplied options. The Score and distribution indexes are within the supplied scale. Every probability/confidence value is finite and between 0 and 1. Invalid or missing results are not completed with default decisions. The model, optional provider request ID, and token usage are preserved. Numeric values are not rounded, and confidence does not imply execution permission.
 
-## Adapterek
+## Adapters
 
-A MockDecisionAdapter teljes request alapján kulcsolt, explicit fixture-öket használ. Nincs hálózat, véletlenszám vagy automatikus válaszgenerálás. Azonos request és fixture azonos eredményt ad. Hiányzó vagy hibás fixture DecisionInvalidResponseError. Tesztek domain hibát is beállíthatnak. A szintetikus probability és confidence nem a Jev pontosságának mérése.
+MockDecisionAdapter uses explicit fixtures keyed by the complete request. It uses no network, randomness, or automatic answer generation. The same request and fixture produce the same result. Missing or invalid fixtures raise DecisionInvalidResponseError. Tests may also configure domain errors. Synthetic probability and confidence values do not measure Jev accuracy.
 
-A TypeSafeDecisionAdapter a hivatalos `typesafe-sdk==0.7.5` AsyncTypeSafeClient kliensét használja. Egy evaluate egy system_one hívás több névvel azonosított kérdését küldi. A mapper az SDK Choice/Score/Noul típusait használja, majd a SystemOneResponse eredményét újra validálja a belső kéréshez képest. Az SDK által kihagyott ismeretlen primitív hiányzó válaszként elutasítandó.
+TypeSafeDecisionAdapter uses the official `typesafe-sdk==0.7.5` AsyncTypeSafeClient. One evaluate call sends multiple named questions in a single system_one call. The mapper uses the SDK Choice/Score/Noul types, then revalidates the SystemOneResponse result against the internal request. An unknown primitive omitted by the SDK must be rejected as a missing answer.
 
-A kliens a FastAPI lifespan alatt egyszer jön létre workerfolyamatonként és shutdownkor aszinkron lezáródik. A DecisionPort FastAPI dependency providerből érhető el és tesztben override-olható. Mock/disabled módban a valódi SDK-kliens nem inicializálódik. A Qdrant readiness és a döntési képesség független egymástól. Nem jött létre nyilvános Jev HTTP-endpoint.
+The client is created once per worker process during the FastAPI lifespan and closed asynchronously at shutdown. DecisionPort is available through a FastAPI dependency provider and can be overridden in tests. The real SDK client is not initialized in mock/disabled mode. Qdrant readiness and decision capability are independent. No public Jev HTTP endpoint has been added.
