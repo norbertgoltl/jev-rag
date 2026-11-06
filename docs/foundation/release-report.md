@@ -4,9 +4,9 @@
 
 **ACCEPTED, with one standing condition.** Details and evidence are in the re-validation section below.
 
-- Accepted commit: `15edbcd` on `main` (merge of PR #40). All four CI jobs passed on this commit (run 42202743787).
-- Release tag: `foundation-0.1.0` marks the commit that contains this status section, which differs from `15edbcd` only by this report.
-- Validated code: `ae20b27`. Later commits change documentation only: the release evidence, the English translation of the project documentation (PR #40) and the `AGENTS.md` rules.
+- Accepted state: `main` at `1e6afc7` (merge of PR #43). All four CI jobs passed on this commit (run 42236471655).
+- Release tag: `foundation-0.1.0` marks the merge commit of the pull request that last updated this section. That commit differs from `1e6afc7` only by this section and the CI row in the re-validation table, so the tag points at the accepted state.
+- Validated code: `ae20b27`. Later commits change documentation only: the release evidence, the English translation of the project documentation (PR #40), the `AGENTS.md` rules, and the README (PRs #42 and #43).
 - Documentation language: all tracked markdown files are English. The web application's Hungarian UI texts and the HU/EN test fixture are intentional.
 - Standing condition: enforcement of the required checks (`backend`, `frontend`, `infrastructure`, `security`) holds only while the repository is public or on a plan that supports rulesets for private repositories.
 - The sections "Initial validation record" to "Initial decision" describe the first attempt of 2026-10-31 and are superseded.
@@ -87,7 +87,7 @@ The Foundation changed after the first record above (strict mypy gate, Prettier 
 | Failed or missing required check blocks merge | PASS while public; FAIL while private | After the repository returned to private, test PR #36 (same intentionally failing test, closed without merging, branch deleted) was reported as `mergeStateStatus: UNSTABLE` (`mergeable_state: unstable`), not `BLOCKED`: the failing `backend` check is not treated as required, so the ruleset is not enforced while the repository is private on the current plan. The rulesets API again returns HTTP 403. The public-state evidence follows. PR #28 had been merged while its `frontend` check was still queued, before enforcement was available. Test PR #33 contained one intentionally failing test: `backend` failed, the other three checks passed, and GitHub reported `mergeStateStatus: BLOCKED` (`mergeable_state: blocked`) for a non-draft PR. A merge was deliberately not attempted. The PR was closed without merging and its branch deleted. |
 | GitHub secret scanning and push protection | PASS while public; NOT VERIFIED while private | After the repository became public the API reports `secret_scanning` and `secret_scanning_push_protection` as `enabled`. While private the API again reports no `security_and_analysis` data. The Gitleaks history and working-tree scans in `make security-check` and the CI `security` job are unaffected. |
 | Documentation language | PASS | PR #40 translated the remaining 14 Hungarian markdown files to English. No Hungarian accented characters or common Hungarian words remain in any tracked markdown file, all relative links resolve, and `prettier --check` and `make security-check` passed. A stale statement about an importable default app was removed and the FND-018-020 test counts were dated. |
-| CI on the accepted commit | PASS | `main` at `15edbcd` (run 42202743787): `backend`, `frontend`, `infrastructure` and `security` succeeded. The diff between the validated code commit `ae20b27` and `15edbcd` contains documentation only. |
+| CI on the accepted commit | PASS | `main` at `1e6afc7` (run 42236471655): `backend`, `frontend`, `infrastructure` and `security` succeeded. The diff between the validated code commit `ae20b27` and `1e6afc7` lists no file other than markdown. |
 
 ### Decision after re-validation
 
