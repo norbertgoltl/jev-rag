@@ -1,6 +1,6 @@
 # Ingestion configuration
 
-Status: design for ING-003, implemented by PR-ING-002. Ingestion settings extend the existing Foundation `Settings` in `core/config.py`. No second settings class or resolver is introduced.
+Status: implemented by PR-ING-002 in `core/config.py` (fields are the lower-case names of the variables below, for example `ingestion_enabled`). `.env.example` lists every field. Ingestion settings extend the existing Foundation `Settings` in `core/config.py`. No second settings class or resolver is introduced.
 
 ## 1. Source priority
 

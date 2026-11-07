@@ -118,6 +118,9 @@ docker/volumes/
 postgres-data/
 redis-data/
 
+# Local ingestion registry and source store
+data/ingestion/
+
 # LOGS / TEMPORARY FILES
 
 logs/

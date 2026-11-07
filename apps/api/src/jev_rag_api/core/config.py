@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Literal, Self
 from urllib.parse import urlsplit
@@ -18,6 +19,15 @@ def find_env_file() -> Path | None:
 
 
 ROOT_ENV_FILE = find_env_file()
+REPOSITORY_ROOT = ROOT_ENV_FILE.parent if ROOT_ENV_FILE else None
+
+SUPPORTED_INGESTION_EXTENSIONS = frozenset({".txt", ".md", ".pdf", ".docx"})
+COLLECTION_NAME_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,62}")
+EmbeddingProviderName = Literal["none"]
+
+
+def _default_ingestion_path(*parts: str) -> Path | None:
+    return REPOSITORY_ROOT.joinpath(*parts) if REPOSITORY_ROOT else None
 
 
 class Settings(BaseSettings):
@@ -43,6 +53,59 @@ class Settings(BaseSettings):
     typesafe_timeout_seconds: float = Field(default=5.0, gt=0, allow_inf_nan=False)
     typesafe_retry_max: int = Field(default=1, ge=0)
     typesafe_retry_budget_seconds: float = Field(default=10.0, gt=0, allow_inf_nan=False)
+
+    ingestion_enabled: bool = False
+    ingestion_storage_root: Path | None = Field(
+        default_factory=lambda: _default_ingestion_path("data", "ingestion", "sources")
+    )
+    ingestion_db_path: Path | None = Field(
+        default_factory=lambda: _default_ingestion_path("data", "ingestion", "registry.sqlite3")
+    )
+    ingestion_max_file_bytes: int = Field(default=26_214_400, gt=0)
+    ingestion_allowed_extensions: list[str] = Field(
+        default_factory=lambda: [".txt", ".md", ".pdf", ".docx"]
+    )
+    ingestion_max_concurrent_jobs: int = Field(default=1, gt=0)
+    ingestion_job_lease_seconds: int = Field(default=300, gt=0)
+    ingestion_chunk_target_tokens: int = Field(default=400, gt=0)
+    ingestion_chunk_overlap_tokens: int = Field(default=64, ge=0)
+    ingestion_embedding_provider: EmbeddingProviderName = "none"
+    ingestion_embedding_model: str | None = None
+    ingestion_embedding_batch_size: int = Field(default=16, gt=0)
+    ingestion_qdrant_collection: str = "rag_chunks_v1"
+    ingestion_allow_remote_embedding: bool = False
+
+    @field_validator("ingestion_storage_root", "ingestion_db_path")
+    @classmethod
+    def normalize_ingestion_path(cls, path: Path | None) -> Path | None:
+        """Resolve relative values against the repository root, never the working directory."""
+        if path is None or path.is_absolute():
+            return path
+        if REPOSITORY_ROOT is None:
+            raise ValueError("Ingestion paths must be absolute outside a source checkout")
+        return REPOSITORY_ROOT / path
+
+    @field_validator("ingestion_allowed_extensions")
+    @classmethod
+    def validate_extensions(cls, extensions: list[str]) -> list[str]:
+        normalized = list(dict.fromkeys(extension.strip().lower() for extension in extensions))
+        if not normalized or not set(normalized) <= SUPPORTED_INGESTION_EXTENSIONS:
+            raise ValueError("Allowed extensions must be a non-empty supported subset")
+        return normalized
+
+    @field_validator("ingestion_embedding_model")
+    @classmethod
+    def validate_embedding_model(cls, model: str | None) -> str | None:
+        if model is not None and not model.strip():
+            raise ValueError("Embedding model must not be blank")
+        return model.strip() if model else None
+
+    @field_validator("ingestion_qdrant_collection")
+    @classmethod
+    def validate_collection_name(cls, name: str) -> str:
+        if not COLLECTION_NAME_PATTERN.fullmatch(name):
+            raise ValueError("Invalid Qdrant collection name")
+        return name
 
     @field_validator("cors_allowed_origins")
     @classmethod
@@ -72,6 +135,15 @@ class Settings(BaseSettings):
             raise ValueError("Debug mode is forbidden in production")
         if self.app_env == "production" and self.jev_mode not in {"live", "disabled"}:
             raise ValueError("Production requires explicit live or disabled Jev mode")
+        if self.ingestion_chunk_overlap_tokens >= self.ingestion_chunk_target_tokens:
+            raise ValueError("Chunk overlap must be lower than the chunk target")
+        if self.ingestion_enabled and (
+            self.ingestion_embedding_provider == "none"
+            or self.ingestion_embedding_model is None
+            or self.ingestion_storage_root is None
+            or self.ingestion_db_path is None
+        ):
+            raise ValueError("Enabled ingestion requires a provider, a model, and storage paths")
         if self.effective_jev_mode == "live":
             key = self.typesafe_api_key.get_secret_value() if self.typesafe_api_key else ""
             if (

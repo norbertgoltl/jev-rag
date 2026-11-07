@@ -1,6 +1,19 @@
 # Ingestion contracts
 
-Status: design for ING-001, implemented by PR-ING-002. The Python signatures are synchronized with the code in PR-ING-002. Architecture context: [architecture](architecture.md).
+Status: implemented by PR-ING-002. The signatures below match the code. Architecture context: [architecture](architecture.md).
+
+## 0. Code locations
+
+| Path (under `apps/api/src/jev_rag_api`) | Content |
+| --- | --- |
+| `domain/ingestion/enums.py` | Enumerations |
+| `domain/ingestion/identifiers.py` | Namespace constant, SHA-256 helpers, `derive_chunk_id` |
+| `domain/ingestion/models.py` | Models and invariants |
+| `domain/ingestion/transitions.py` | Job and generation transition validation, `transition_job` |
+| `domain/ingestion/errors.py` | `IngestionError` subclasses and `ERROR_CODES` |
+| `application/ports/ingestion/` | `documents.py`, `jobs.py`, `extract.py`, `transform.py`, `embedding.py`, `vectors.py` |
+
+`identifiers.py` and `transitions.py` are additions to the planned file list. They keep hashing and state rules out of the model module. Tests live in `apps/api/tests/ingestion/` as `test_ingestion_models.py`, `test_ingestion_contracts.py`, and `test_ingestion_settings.py`. The `test_ingestion_` prefix is required because the test tree has no packages, so pytest needs unique module names and `tests/unit/decisions/test_models.py` already exists.
 
 ## 1. Glossary
 
@@ -66,7 +79,7 @@ All models are frozen Pydantic v2 models that forbid extra fields and hide input
 | `DocumentRecord` | `document_id`, `created_at`, `active_version: int \| None`, `active_index_generation_id: UUID \| None`, `deleted_at: datetime \| None` | `active_version` and `active_index_generation_id` are both set or both `None`. A deleted document has neither. The repository additionally guarantees that the active generation belongs to an existing version. |
 | `DocumentVersion` | `document_id`, `version`, `content_sha256`, `source_name`, `media_type`, `storage_key`, `created_at` | `version ≥ 1`. Valid SHA-256. `storage_key` is relative and opaque. `source_name` is a base name without path separators or control characters, at most 255 characters. `media_type` is a lowercase `type/subtype`. |
 | `IndexGeneration` | `generation_id`, `document_id`, `document_version`, `pipeline_fingerprint`, `state`, `created_at` | `document_version ≥ 1`. Valid fingerprint. Bound to one version and one pipeline snapshot. |
-| `IngestionJob` | `job_id`, `job_type`, `document_id`, `document_version: int \| None`, `index_generation_id: UUID \| None`, `status`, `stage: JobStage \| None`, `attempt`, `created_at`, `updated_at`, `error_code: str \| None` | `attempt ≥ 0`. `processing` requires a stage. `queued` and `completed` have no stage. `processing`, `completed`, and `failed` require `attempt ≥ 1`. `error_code` is set exactly when `failed`. `ingest` and `reindex` require `document_version`. `updated_at ≥ created_at`. |
+| `IngestionJob` | `job_id`, `job_type`, `document_id`, `document_version: int \| None`, `index_generation_id: UUID \| None`, `status`, `stage: JobStage \| None`, `attempt`, `created_at`, `updated_at`, `error_code: str \| None` | `attempt ≥ 0`. `processing` requires a stage. `queued` and `completed` have no stage. `processing`, `completed`, and `failed` require `attempt ≥ 1`. `error_code` is set exactly when `failed` and must be a known `ING_*` code. `ingest` and `reindex` require `document_version`. `updated_at ≥ created_at`. |
 | `SourceSpan` | `start_offset: int \| None`, `end_offset: int \| None`, `locator: str \| None` | Offsets are both set or both `None`, `0 ≤ start ≤ end`. At least one field is set. Recorded only when the parser produces it reliably. |
 | `ExtractedBlock` | `block_index`, `text`, `kind`, `page: int \| None`, `section_path: tuple[str, ...]`, `source_span: SourceSpan \| None` | `block_index ≥ 0`. Text is non-blank. `page ≥ 1`. A missing page is `None`, never an invented `1`. |
 | `ExtractionResult` | `document_id`, `document_version`, `parser_id`, `parser_version`, `blocks`, `warnings: tuple[str, ...]` | `document_version ≥ 1`. Block indexes are consecutive from 0 in order. Warnings are stable codes, never document text. An empty block tuple is allowed and handled by a later validator. |
