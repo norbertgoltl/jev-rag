@@ -10,6 +10,7 @@ dependencies = [
   "pydantic-settings>=2,<3",
   "httpx>=0.28,<1",
   "typesafe-sdk==0.7.5",
+  "pypdf>=7.0.0,<8",
 ]
 
 [dependency-groups]
