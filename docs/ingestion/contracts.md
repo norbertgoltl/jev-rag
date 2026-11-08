@@ -13,7 +13,7 @@ Status: implemented by PR-ING-002. The signatures below match the code. Architec
 | `domain/ingestion/errors.py` | `IngestionError` subclasses and `ERROR_CODES` |
 | `application/ports/ingestion/` | `documents.py`, `jobs.py`, `extract.py`, `transform.py`, `embedding.py`, `vectors.py` |
 
-`identifiers.py` and `transitions.py` are additions to the planned file list. They keep hashing and state rules out of the model module. Tests live in `apps/api/tests/ingestion/` as `test_ingestion_models.py`, `test_ingestion_contracts.py`, and `test_ingestion_settings.py`. The `test_ingestion_` prefix is required because the test tree has no packages, so pytest needs unique module names and `tests/unit/decisions/test_models.py` already exists.
+`identifiers.py` and `transitions.py` are additions to the planned file list. They keep hashing and state rules out of the model module. Adapters for ING-004–006 live in `integrations/ingestion/` and are described in [intake and persistence](intake-and-persistence.md). Tests live in `apps/api/tests/ingestion/` as `test_ingestion_models.py`, `test_ingestion_contracts.py`, and `test_ingestion_settings.py`. The `test_ingestion_` prefix is required because the test tree has no packages, so pytest needs unique module names and `tests/unit/decisions/test_models.py` already exists.
 
 ## 1. Glossary
 
@@ -145,7 +145,7 @@ General rules: `extract` and `chunk` never mutate their inputs and return a stab
 | `requeue(job_id, *, now)` | Explicit retry, `failed → queued`. |
 | `release_expired(*, now)` | Move expired `processing` jobs to `queued`. Returns the released job IDs. |
 
-Atomic claim, CAS, and attempt history are implemented in ING-019–020.
+The SQLite adapter (ING-006) implements the atomic claim, the attempt compare-and-swap, the lease, and the attempt history. The worker loop, lease renewal, and retry policy are ING-019–020. Adapter behavior beyond these signatures is described in [intake and persistence](intake-and-persistence.md).
 
 ### 6.4 Processing ports
 

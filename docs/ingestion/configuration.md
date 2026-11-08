@@ -50,7 +50,7 @@ PR-ING-002 performs static validation only. It does not contact Qdrant, download
 
 - Raw document text, unnecessary filename detail, and upload bodies are not logged.
 - Storage keys are generated. Paths from users are never concatenated.
-- Real content validation is part of ING-004.
+- Real content validation is implemented by ING-004. Limits and policy: [intake and persistence](intake-and-persistence.md).
 - Document data reaches an external provider only with explicit configuration and documented data handling.
 - `data/ingestion/` holds local data and is not version controlled. `.gitignore` already covers `*.sqlite3`. PR-ING-002 adds `data/ingestion/` because the source store directory is not covered today.
 - The full `Settings` object is never serialized or logged. Later secret keys use `SecretStr`.
